@@ -1,0 +1,29 @@
+# «Будильник» планера: раз в 10 минут смотрит дела в закрытом хранилище planer-data и присылает пуш-уведомления.
+name: notify
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: notify
+  cancel-in-progress: false
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/notify
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --silent web-push@3.6.7
+        working-directory: .github/notify
+      - run: node notify.mjs
+        working-directory: .github/notify
+        env:
+          DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}

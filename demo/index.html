@@ -661,6 +661,13 @@ html.dark-over,html.dark-over body{background:#121212}
     <button class="cell" id="syncBtn"><span id="syncSt" style="color:var(--mut);font-size:15px">Не подключено</span><b style="font-weight:600">Обновить</b></button>
     <button class="cell" id="syncHelp"><span>Как подключить</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
+  <div class="ghead">Уведомления</div>
+  <div class="group" id="ntGroup">
+    <label class="cell"><span>Присылать уведомления</span><input type="checkbox" switch id="ntOn"></label>
+    <label class="cell"><span>Напоминать за</span><select class="pick" id="ntLead"><option value="0">В момент</option><option value="5">5 минут</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="60">1 час</option></select></label>
+    <label class="cell"><span>Утренняя сводка</span><select class="pick" id="ntM"><option value="">Выкл</option><option>07:00</option><option>08:00</option><option>09:00</option><option>10:00</option></select></label>
+    <div class="cell" id="ntSt" style="font-size:13px;color:var(--mut);min-height:44px;line-height:1.35;padding-top:8px;padding-bottom:8px">Работает, когда планер установлен на экран «Домой» и подключена синхронизация</div>
+  </div>
   <div class="group" id="demoWrap"><button class="cell red" id="demoBtn">Убрать примеры</button></div>
   <div class="group"><button class="cell red" id="resetBtn">Сбросить всё</button></div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -1184,7 +1191,7 @@ $('fSave').onclick=()=>{
 $('fDel').onclick=()=>{if(!editing)return;if(!confirm('Удалить задачу «'+editing.title+'»?'))return;S.gone[editing.id]=Date.now();S.tasks=S.tasks.filter(x=>x!==editing);save();hide();render()};
 
 /* настройки */
-$('menuBtn').onclick=()=>{$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
+$('menuBtn').onclick=()=>{ntFill();$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
 $('themeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.theme=b.dataset.t;save();applyTheme();render()}});
 $('exportBtn').onclick=async()=>{
   const name=`Копия планера ${iso(new Date())}.json`,data=JSON.stringify(S,null,1);
@@ -1244,7 +1251,7 @@ const gh=(path,opt={})=>fetch('https://api.github.com'+path,{...opt,cache:'no-st
   headers:{Authorization:'Bearer '+token(),Accept:'application/vnd.github+json','Content-Type':'application/json'}});
 const b64e=str=>{const b=new TextEncoder().encode(str);let r='';for(let i=0;i<b.length;i+=8192)r+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(r)};
 const b64d=str=>new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\n/g,'')),c=>c.charCodeAt(0)));
-const shared=x=>JSON.stringify({tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
+const shared=x=>JSON.stringify({notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
 function merge(r){
   const T={};
   for(const t of [...S.tasks,...(r.tasks||[])]){const o=T[t.id];if(!o||(t.u||0)>(o.u||0))T[t.id]=t}
@@ -1262,6 +1269,7 @@ function merge(r){
     const M={};for(const t of[...(S[key]||[]),...(r[key]||[])]){const o=M[t.id];if(!o||(t.u||0)>(o.u||0))M[t.id]=t}
     S[key]=Object.values(M).filter(t=>!(S.gone[t.id]>=(t.u||0)));
   }
+  if((rst.n||0)>(S.st.n||0)&&r.notify){S.notify=r.notify;S.st.n=rst.n}
   const RH=r.hab||{};
   for(const k of new Set([...Object.keys(S.hab),...Object.keys(RH)])){
     const ls=S.st['h'+k]||0,rs=rst['h'+k]||0;
@@ -1606,6 +1614,57 @@ function showErr(){
 addEventListener('error',e=>{if(e.filename&&!e.filename.startsWith(location.origin))return;showErr()});
 addEventListener('unhandledrejection',()=>{});
 
+/* уведомления: телефон подписывается на пуши, «будильник» на GitHub (раз в 10 минут) присылает напоминания */
+const VAPID='BK29stD1eZozutj80QHTr7fF3x9UHqwB6MZ9Ha1bSvziMAP6YO3CFjvdPwuNVcuczRGNOGE5-vBa0b6kOH379zM';
+const NDEF={lead:15,morning:true,mtime:'09:00'};
+const nt=()=>({...NDEF,...(S.notify||{})});
+let devId='';try{devId=localStorage.getItem('planerdemo.dev')||'';if(!devId){devId=newId();localStorage.setItem('planerdemo.dev',devId)}}catch(e){devId=newId()}
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const ntSt=t=>$('ntSt').textContent=t;
+function ntFill(){
+  const n=nt();$('ntLead').value=String(n.lead);$('ntM').value=n.morning?n.mtime:'';
+  let on=false;try{on=localStorage.getItem('planerdemo.push')==='1'}catch(e){}$('ntOn').checked=on;
+  if(on)ntSt('Включено на этом устройстве ✓ Напоминания приходят с точностью ±10 минут');
+}
+function ntSave(){
+  const v=$('ntM').value;S.notify={lead:+$('ntLead').value,morning:!!v,mtime:v||'09:00',tz:Intl.DateTimeFormat().resolvedOptions().timeZone};
+  S.st.n=Date.now();save();
+}
+$('ntLead').addEventListener('change',ntSave);$('ntM').addEventListener('change',ntSave);
+const b64uBytes=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function ensureOwner(){if(!owner){const u=await gh('/user');if(!u.ok)throw u.status;owner=(await u.json()).login;localStorage.setItem('planerdemo.owner',owner)}}
+async function subFile(method,content){
+  await ensureOwner();const path=`/repos/${owner}/${REPO}/contents/subs/${devId}.json`;
+  const g=await gh(path);const sha=g.ok?(await g.json()).sha:null;
+  if(method==='DELETE'){if(sha)await gh(path,{method:'DELETE',body:JSON.stringify({message:'push off',sha})});return}
+  const body={message:'push on',content:b64e(content)};if(sha)body.sha=sha;
+  const p=await gh(path,{method:'PUT',body:JSON.stringify(body)});if(!p.ok)throw p.status;
+}
+async function pushOn(){
+  if(!token())return ntSt('Сначала вставь ключ GitHub в «Синхронизации» — через него телефон регистрируется для уведомлений');
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!window.Notification)
+    return ntSt(/iPhone|iPad/.test(navigator.userAgent)&&!standalone()?'Открой планер с экрана «Домой» (Safari → Поделиться → На экран «Домой») и включи здесь':'Этот браузер не умеет присылать уведомления');
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted')return ntSt('Уведомления запрещены. Разреши их: Настройки айфона → Планер → Уведомления');
+  ntSt('Подключаю…');
+  const reg=await navigator.serviceWorker.ready;
+  const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uBytes(VAPID)}));
+  await subFile('PUT',JSON.stringify(sub));
+  if(!S.notify)ntSave();
+  try{localStorage.setItem('planerdemo.push','1')}catch(e){}
+  return true;
+}
+$('ntOn').addEventListener('change',async e=>{
+  if(e.target.checked){
+    let ok=false;try{ok=(await pushOn())===true}catch(err){ntSt(err===401||err===403?'Ключ GitHub не подходит':'Не получилось подключить, попробуй ещё раз с интернетом')}
+    e.target.checked=ok;if(ok){ntFill();haptic(12)}
+  }else{
+    try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();await subFile('DELETE')}catch(err){}
+    try{localStorage.removeItem('planerdemo.push')}catch(err){}
+    ntSt('Уведомления выключены на этом устройстве');
+  }
+});
+
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;
 $('seg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===S.cal));
@@ -1650,7 +1709,7 @@ applyTheme();render();
 <button class="tip-again" id="tipAgain" hidden>? подсказки</button>
 <script>
 /* тестовая версия: без синхронизации */
-(()=>{const g=$('tokIn').closest('.group');g.style.display='none';const h=g.previousElementSibling;if(h&&h.classList.contains('ghead'))h.style.display='none'})();
+for(const g of[$('tokIn').closest('.group'),$('ntGroup')]){g.style.display='none';const h=g.previousElementSibling;if(h&&h.classList.contains('ghead'))h.style.display='none'}
 const TIPS=[
   ['#seg','Это три мира: Работа, Учёба и Личное. Переключай — сменится цвет всего экрана'],
   ['.day.today,.day.sel','Нажми на любой день — внизу появятся его дела. Свайп по календарю листает месяцы'],

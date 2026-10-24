@@ -360,7 +360,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
 .sact.r{background:#121212;color:#D4FF3A;justify-content:flex-end}
 .swr[data-dir="r"] .sact.l,.swr[data-dir="l"] .sact.r{opacity:.55}
 .swr.arm .sact{opacity:1!important}
-.task{background:color-mix(in srgb,var(--fg) 13%,var(--bg));touch-action:pan-y;transition:transform .4s var(--ease),opacity .25s}
+.task{background:var(--soft);background:color-mix(in srgb,var(--fg) 13%,var(--bg));touch-action:pan-y;transition:transform .4s var(--ease),opacity .25s}
 .task.drag{transition:none}
 .tag{border:0;font:inherit;font-size:12px;font-weight:600}
 /* карточка дня: перенос, привычки, дни рождения */
@@ -459,6 +459,55 @@ select.pick{text-align:right;max-width:58%}
 .srow small{display:block;color:var(--mut);font-size:13px}
 .slist{max-height:38vh;overflow-y:auto}
 .sall{font-size:15px;font-weight:700;color:#6B3CF6;margin:0 16px 8px;display:block}
+
+html.dark-over,html.dark-over body{background:#121212}
+
+/* ===== адаптация ===== */
+/* маленькие телефоны (iPhone SE, mini) */
+@media (max-width:370px){
+  .app{padding-left:14px;padding-right:14px}
+  .month{font-size:38px}
+  .wd,.grid{column-gap:4px}.grid{row-gap:4px}
+  .day{padding:4px 4px 5px;border-radius:10px}
+  .num{font-size:13px}
+  .seg button{font-size:13px}
+  .daycard{padding:16px 14px 14px;border-radius:24px}
+  .daycard h2{font-size:26px}
+  .tabs{left:12px;right:12px}
+  .tabs .tb2 button{width:48px}
+  .or-text{font-size:23px}
+  .tech h1,.onb h1{font-size:38px}
+  .hhero b{font-size:48px}
+  .fc-time{font-size:52px}
+  .fmt .fchip{padding:6px 8px}
+}
+/* планшет в портрете */
+@media (min-width:600px){.app{max-width:620px}.tabs{max-width:480px}}
+/* айпад горизонтально и мак: календарь слева, день справа */
+@media (min-width:920px){
+  .app{max-width:1120px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);column-gap:44px;align-items:start;padding-left:32px;padding-right:32px}
+  .app>*{grid-column:1}
+  #pCal{grid-column:2;grid-row:1 / span 6;position:sticky;top:24px}
+  #pCal .daycard{margin-top:0}
+  #pStat,#pHot,#pHab{grid-column:1 / -1}
+  #pStat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+  #pStat>.card,#pStat>.two{margin:0}
+  #pStat>.card.pop{grid-column:1 / -1}
+  #pHot{column-count:2;column-gap:20px}
+  #pHot .hhero{column-span:all}
+  #pHot .hsec{break-inside:avoid}
+  #pHab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+  #pHab>.hhero,#pHab>.hedit,#pHab>.hempty{grid-column:1 / -1}
+  #pHab .habc{margin:0}
+  .month{font-size:56px}
+  .num{font-size:17px}
+  .bg{height:70vh}
+  .tabs{max-width:520px}
+  .sheet{bottom:24px;border-radius:28px;max-width:520px}
+  .day:hover{box-shadow:inset 0 0 0 2px var(--fg)}
+}
+/* мышь: подсказка, что можно нажать */
+@media (hover:hover){.task .tb:hover .tt,.hrow:hover b{text-decoration:underline;text-underline-offset:3px}button{cursor:pointer}}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
@@ -792,7 +841,13 @@ function applyTheme(){
   $('themeSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.theme));
 }
 mq.addEventListener('change',()=>{applyTheme();render()});
-function paint(){document.documentElement.dataset.cal=S.cal;$('themeColor').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()}
+function paint(){document.documentElement.dataset.cal=S.cal;barColor()}
+/* цвет строки состояния: чёрный, когда открыт тёмный полноэкранный экран (техработы, фокус), иначе — цвет мира */
+function barColor(){
+  const dark=['tech','focus'].some(id=>{const e=document.getElementById(id);return e&&e.classList.contains('on')});
+  document.documentElement.classList.toggle('dark-over',dark);
+  $('themeColor').content=dark?'#121212':getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+}
 
 /* отрисовка */
 function renderCal(dir){
@@ -1131,15 +1186,17 @@ $('fDel').onclick=()=>{if(!editing)return;if(!confirm('Удалить задач
 /* настройки */
 $('menuBtn').onclick=()=>{$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
 $('themeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.theme=b.dataset.t;save();applyTheme();render()}});
-$('exportBtn').onclick=()=>{
-  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`planer-${iso(new Date())}.json`;a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+$('exportBtn').onclick=async()=>{
+  const name=`Копия планера ${iso(new Date())}.json`,data=JSON.stringify(S,null,1);
+  const file=new File([data],name,{type:'application/json;charset=utf-8'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Копия планера'});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/octet-stream'}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 };
 $('importBtn').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{const d=JSON.parse(await f.text());if(!Array.isArray(d.tasks))throw 0;
+  try{const d=JSON.parse((await f.text()).replace(/^\ufeff/,''));if(!Array.isArray(d.tasks))throw 0;
     if(!confirm(`Заменить текущие задачи задачами из файла (${d.tasks.length} шт.)?`))return;
     S=Object.assign({theme:S.theme,cal:'w',days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
   catch(_){alert('Это не файл копии планера')}
@@ -1299,7 +1356,7 @@ async function checkTech(){
   try{
     const r=await fetch('maintenance.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;
     const m=await r.json(),T=$('tech'),was=T.classList.contains('on');
-    if(m.on){if(m.text)$('techText').textContent=m.text;T.classList.add('on')}
+    if(m.on){if(m.text)$('techText').textContent=m.text;T.classList.add('on');barColor()}
     else if(was)location.reload();
   }catch(e){}
 }
@@ -1357,9 +1414,9 @@ function startFocus(t){
 function openFocus(){
   $('fcT').textContent=F.fin?'Время вышло! Задача готова? 🎉':F.title;
   $('fcBtn').innerHTML=F.fin?`Отметить выполненной<span>${CHECK}</span>`:F.paused?`Продолжить<span>${PLAY}</span>`:`Пауза<span>${PAUSE}</span>`;
-  $('focus').classList.add('on');clearInterval(fTick);fTick=setInterval(drawFocus,250);drawFocus();
+  $('focus').classList.add('on');barColor();clearInterval(fTick);fTick=setInterval(drawFocus,250);drawFocus();
 }
-function closeFocus(){$('focus').classList.remove('on');clearInterval(fTick);F=null;saveF()}
+function closeFocus(){$('focus').classList.remove('on');barColor();clearInterval(fTick);F=null;saveF()}
 $('focusBtn').onclick=()=>{const t=editing;hide();setTimeout(()=>startFocus(t),250)};
 $('fcClose').onclick=()=>{if(F&&!F.fin&&!confirm('Остановить таймер?'))return;closeFocus()};
 $('fcBtn').onclick=()=>{
@@ -1536,6 +1593,18 @@ $('resetBtn').onclick=()=>{
   for(const k in S.hab){S.hab[k]=null;S.st['h'+k]=now}
   S.daysDemo=false;save();hide();render();haptic([20,60,20]);
 };
+
+/* если что-то сломалось — не белый экран, а аккуратная плашка с кнопкой «Обновить» (данные в памяти телефона целы) */
+let errShown=false;
+function showErr(){
+  if(errShown)return;errShown=true;
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 100px);z-index:90;max-width:440px;margin:0 auto;background:#121212;color:#fff;border-radius:18px;padding:14px 16px;font:600 14px/1.4 -apple-system,system-ui,sans-serif;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.3)';
+  d.innerHTML='<span style="flex:1">Что-то пошло не так, но твои дела сохранены.</span><button style="background:#D4FF3A;color:#121212;border-radius:999px;padding:8px 12px;font-weight:800">Обновить</button>';
+  d.querySelector('button').onclick=()=>location.reload();document.body.appendChild(d);
+}
+addEventListener('error',e=>{if(e.filename&&!e.filename.startsWith(location.origin))return;showErr()});
+addEventListener('unhandledrejection',()=>{});
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

@@ -1667,6 +1667,21 @@ $('ntOn').addEventListener('change',async e=>{
   }
 });
 
+/* значок установлен в старом режиме (фон не заходит под часы) — один раз подсказываем переустановить */
+(function(){
+  if(!standalone()||!/iPhone|iPad/.test(navigator.userAgent))return;
+  const pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden';document.body.appendChild(pr);
+  const h=pr.offsetHeight;pr.remove();
+  let seen=false;try{seen=localStorage.getItem('planer.bartip')==='1'}catch(e){}
+  if(h>0||seen)return;
+  const safe=!!token();
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:85;max-width:460px;margin:0 auto;background:#121212;color:#fff;border-radius:20px;padding:14px 16px;font:500 14px/1.45 -apple-system,system-ui,sans-serif;box-shadow:0 12px 32px rgba(0,0,0,.35)';
+  d.innerHTML=`<b style="display:block;font-size:15px;margin-bottom:4px">Значок установлен в старом режиме</b>Чтобы фон заходил под часы, удали значок планера и добавь заново: Safari → «Поделиться» → «На экран „Домой“».${safe?' Задачи сохранены в синхронизации и вернутся сами.':' Сначала сохрани копию: «⋯» → «Сохранить в файл».'}<div style="text-align:right;margin-top:10px"><button style="background:#D4FF3A;color:#121212;border-radius:999px;padding:8px 14px;font-weight:800">Понятно</button></div>`;
+  d.querySelector('button').onclick=()=>{d.remove();try{localStorage.setItem('planer.bartip','1')}catch(e){}};
+  document.body.appendChild(d);
+})();
+
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;
 $('seg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===S.cal));

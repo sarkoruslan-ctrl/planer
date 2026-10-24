@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Отправить тестовое уведомление'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -27,3 +32,4 @@ jobs:
         env:
           DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          TEST: ${{ inputs.test }}

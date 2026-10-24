@@ -19,8 +19,10 @@ async function putJson(path, data, sha) {
   await api(path, { method: 'PUT', body: JSON.stringify(body) });
 }
 
-const { data: S } = await getJson('data.json');
-if (!S) { console.log('нет данных'); process.exit(0); }
+const TEST = process.env.TEST === 'true';
+const { data: S0 } = await getJson('data.json');
+if (!S0 && !TEST) { console.log('нет данных'); process.exit(0); }
+const S = S0 || {};
 const N = { lead: 15, morning: true, mtime: '09:00', tz: 'Europe/Moscow', ...(S.notify || {}) };
 
 // «сейчас» в часовом поясе телефона
@@ -72,16 +74,18 @@ if (N.morning && nowMin >= toMin(N.mtime) && nowMin - toMin(N.mtime) < 180 && !s
 }
 for (const k of Object.keys(sent)) if (Date.now() - sent[k] > 3 * 864e5) { delete sent[k]; changed = true; }
 
+if (TEST) { out.length = 0; out.push({ title: '✦ Проверка связи', body: 'Уведомления работают! Так будут выглядеть напоминания о делах.', tag: 'test-' + Date.now() }); }
+let devices = 0, okN = 0, errs = [];
 if (out.length) {
   const r = await api('subs'); const files = r.ok ? await r.json() : [];
   for (const f of Array.isArray(files) ? files : []) {
     if (!f.name.endsWith('.json')) continue;
-    const { data: sub, sha } = await getJson('subs/' + f.name);
+    const { data: sub, sha } = await getJson('subs/' + f.name); devices++;
     for (const n of out) {
-      try { await webpush.sendNotification(sub, JSON.stringify({ ...n, url: './' }), { TTL: 3600 }); }
-      catch (e) { if (e.statusCode === 404 || e.statusCode === 410) { await api('subs/' + f.name, { method: 'DELETE', body: JSON.stringify({ message: 'notify: old device', sha }) }); break; } }
+      try { await webpush.sendNotification(sub, JSON.stringify({ ...n, url: './' }), { TTL: 3600 }); okN++; }
+      catch (e) { errs.push(e.statusCode || 'ошибка'); if (e.statusCode === 404 || e.statusCode === 410) { await api('subs/' + f.name, { method: 'DELETE', body: JSON.stringify({ message: 'notify: old device', sha }) }); break; } }
     }
   }
 }
-if (changed) await putJson('sent.json', sent, sentSha);
-console.log(`готово: отправлено ${out.length}`);
+if (changed && !TEST) await putJson('sent.json', sent, sentSha);
+console.log(`готово: сообщений ${out.length}, устройств ${devices}, доставлено ${okN}, ошибки: ${errs.join(',') || 'нет'}`);

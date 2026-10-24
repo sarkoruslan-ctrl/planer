@@ -65,6 +65,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
 .day.today .num{color:var(--today);font-weight:800}
 .day.f-in{background:var(--tile);box-shadow:none}
 .day.f-out{background:repeating-linear-gradient(-45deg,var(--hatch) 0 2.5px,transparent 2.5px 6px)}
+.day.f-x{background:radial-gradient(var(--hatch) 1.3px,transparent 1.8px) 0 0/6px 6px}
+.legend{flex-wrap:wrap;row-gap:4px}
 .day.sel{background:var(--inv-bg);box-shadow:none}
 .day.sel .num{color:var(--inv-fg)}
 .day.sel.today .num{color:var(--inv-fg)}
@@ -541,6 +543,24 @@ html.dark-over,html.dark-over body{background:#121212}
 .chat-empty{color:var(--mut);font-size:14px;text-align:center;padding:8px 0}
 @media (max-width:370px){.tabs .tb2 button{width:42px}.pet-lcd{height:128px}}
 
+.rng{margin-top:10px;font-size:13px;font-weight:700;color:rgba(255,255,255,.6);padding:4px 0}
+.fmt{overflow-x:auto;scrollbar-width:none;max-width:100%}.fmt::-webkit-scrollbar{display:none}
+.dayctl{flex-wrap:nowrap;min-width:0}
+/* мысли на месяц — «куча» таблеток, как на референсе */
+.notes{margin-top:22px}
+.notes-h{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px}
+.notes-h b{font-size:20px;font-weight:800;letter-spacing:-.03em}
+.notes-h button{font-size:14px;font-weight:800;padding:8px 14px;border-radius:999px;background:#121212;color:#fff}
+.pile{position:relative;height:var(--ph,200px);overflow:hidden;border-radius:24px;background:var(--soft)}
+.pill{position:absolute;bottom:0;left:0;white-space:nowrap;font-weight:600;border-radius:999px;padding:8px 16px;line-height:1.2;
+  transform-origin:center;cursor:pointer;max-width:92%;overflow:hidden;text-overflow:ellipsis;transition:transform .2s}
+.pill.f{background:#121212;color:#fff}
+.pill.o{background:var(--bg);color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--fg)}
+.pill.drop{animation:pDrop .7s cubic-bezier(.34,1.3,.64,1)}
+@keyframes pDrop{from{translate:0 -260px}}
+.pile-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);font-size:14px;text-align:center;padding:0 24px}
+textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -578,10 +598,12 @@ html.dark-over,html.dark-over body{background:#121212}
       <div class="dayhead"><h2 id="dayTitle"></h2><span id="dayCount"></span></div>
       <div class="dprog"><i id="dBar"></i></div>
       <div class="dayctl"><div class="fmt" id="fmt"></div><button class="emo" id="dEmoji" aria-label="Смайлик дня"></button></div>
+      <button class="rng" id="rngBtn">Отметить период…</button>
       <button class="mv" id="mvBtn"></button>
     </div>
     <div id="list"></div>
   </main>
+  <section class="notes" id="notesBox"></section>
   <main id="pStat" hidden></main>
   <main id="pPet" hidden></main>
   <main id="pHot" hidden></main>
@@ -763,6 +785,26 @@ html.dark-over,html.dark-over body{background:#121212}
   <div class="group"><button class="cell" id="shGo2" style="justify-content:center;font-weight:800">Создать PDF и поделиться</button></div>
 </div>
 
+<div class="sheet ios" id="rngSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><button data-close>Отмена</button><b>Период</b><button class="done" id="rngSave">Готово</button></div>
+  <div class="group">
+    <label class="cell"><span>Отметка</span><select class="pick" id="rngKind"></select></label>
+    <label class="cell"><span>С</span><input class="pick" id="rngFrom" type="date"></label>
+    <label class="cell"><span>По</span><input class="pick" id="rngTo" type="date"></label>
+    <label class="cell"><span>Только будни</span><input type="checkbox" switch id="rngWd" checked></label>
+  </div>
+  <div class="err" id="rngErr" style="margin:-6px 16px 10px"></div>
+</div>
+
+<div class="sheet ios" id="noteSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><button data-close>Отмена</button><b id="noteTitle">Мысль</b><button class="done" id="noteSave">Готово</button></div>
+  <textarea class="field" id="noteText" maxlength="80" placeholder="Например: «больше гулять», «купить кеды», «идея для рилса»"></textarea>
+  <div class="err" id="noteErr" style="margin:6px 4px 10px"></div>
+  <div class="group" id="noteDelWrap"><button class="cell red" id="noteDel">Удалить мысль</button></div>
+</div>
+
 <div class="sheet ios" id="emojiSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <div class="nav"><button id="eClear">Убрать</button><b id="eTitle">Смайлик</b><button class="done" data-close>Готово</button></div>
@@ -809,9 +851,12 @@ const ico=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 /* формат дня: первый вариант — на месте (сплошной), второй — дистанционно (пунктир) */
 const FMT={
   w:[{id:'off',n:'Офис',ic:ico('<path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 10h4a1 1 0 0 1 1 1v10M3 21h18M8 8h3M8 12h3M8 16h3"/>')},
-     {id:'rem',n:'Удалёнка',ic:ico('<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5"/>')}],
+     {id:'rem',n:'Удалёнка',ic:ico('<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5"/>')},
+     {id:'sick',n:'Больничный',x:'🤒',ic:ico('<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>')},
+     {id:'vac',n:'Отпуск',x:'🌴',ic:ico('<rect x="3" y="8" width="18" height="12" rx="2.5"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>')}],
   s:[{id:'uni',n:'Институт',ic:ico('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6"/>')},
-     {id:'sdo',n:'СДО',ic:ico('<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/>')}],
+     {id:'sdo',n:'СДО',ic:ico('<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/>')},
+     {id:'hol',n:'Каникулы',x:'☀️',ic:ico('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')}],
   p:[{id:'out',n:'В городе',ic:ico('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>')},
      {id:'home',n:'Дома',ic:ico('<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5"/>')}]
 };
@@ -819,7 +864,7 @@ let S=load()||{tasks:seed(),theme:'light',cal:'w'};
 if(!S.days){S.days=seedDays();S.daysDemo=true}
 if(!S.marks)S.marks={w:{},s:{}};
 if(!S.gone)S.gone={};if(!S.st)S.st={};
-if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
+if(!S.notes)S.notes=[];if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
 /* смена отметки дня с меткой времени — чтобы при синхронизации победила последняя правка */
 function setMap(kind,cal,date,val){S[kind][cal][date]=val;S.st[kind[0]+cal+date]=Date.now()}
 let tab='cal';
@@ -851,6 +896,10 @@ function dayItems(cal,k){
   return out;
 }
 const derivedFmt=items=>{const x=items.find(t=>t.fmt);return x?x.fmt:null};
+/* отметка дня: своя (в том числе «снята вручную» = 'none') важнее автоматической от пар */
+function dayFmt(cal,k,items){const e=S.days[cal][k];if(e==='none')return null;return e||derivedFmt(items||dayItems(cal,k))}
+const fmtCls=(cal,f)=>{const i=FMT[cal].findIndex(x=>x.id===f);return i<0?'':i===0?'f-in':i===1?'f-out':'f-x'};
+const fmtEmo=(cal,f)=>{const x=FMT[cal].find(y=>y.id===f);return x&&x.x||''};
 function findItem(id){
   if(!id.includes('@'))return S.tasks.find(x=>x.id===id);
   const [sid,k]=id.split('@'),t=S.tasks.find(x=>x.id===sid);
@@ -904,12 +953,12 @@ function renderCal(dir){
     const d=new Date(start);d.setDate(start.getDate()+i);
     if(i===35&&d.getMonth()!==view.m)break;
     const k=iso(d),ev=dayItems(S.cal,k).sort(cmp);
-    const f=S.days[S.cal][k]||derivedFmt(ev),mk=S.marks[S.cal][k]||(S.cal==='w'&&bdayOn(k).length?'🎂':'');
-    const cls=['day',d.getMonth()!==view.m?'out':'',k===today?'today':'',k===sel?'sel':'',f?(f===FMT[S.cal][0].id?'f-in':'f-out'):''].join(' ');
+    const f=dayFmt(S.cal,k,ev),mk=S.marks[S.cal][k]||fmtEmo(S.cal,f)||(S.cal==='w'&&bdayOn(k).length?'🎂':'');
+    const cls=['day',d.getMonth()!==view.m?'out':'',k===today?'today':'',k===sel?'sel':'',f?fmtCls(S.cal,f):''].join(' ');
     h+=`<button class="${cls}" data-d="${k}"><span class="num">${d.getDate()}</span>${mk?`<span class="temo">${mk}</span>`:''}<span class="dots">${ev.slice(0,3).map(t=>`<i style="background:${k===sel?'var(--inv-fg)':typeOf(t.cal,t.type).c};opacity:${t.done?.35:1}"></i>`).join('')}</span></button>`;
   }
   const g=$('grid');g.innerHTML=h;
-  $('legend').innerHTML=`<span><i class="lg in"></i>${FMT[S.cal][0].n}</span><span><i class="lg out"></i>${FMT[S.cal][1].n}</span>`;
+  $('legend').innerHTML=`<span><i class="lg in"></i>${FMT[S.cal][0].n}</span><span><i class="lg out"></i>${FMT[S.cal][1].n}</span>`+FMT[S.cal].slice(2).map(x=>`<span>${x.x} ${x.n.toLowerCase()}</span>`).join('');
   if(dir){g.classList.remove('anim-l','anim-r');void g.offsetWidth;g.classList.add(dir>0?'anim-l':'anim-r')}
 }
 function cmp(a,b){return (a.done-b.done)||((a.time||'99')<(b.time||'99')?-1:1)}
@@ -919,7 +968,7 @@ function renderList(dir){
   const left=items.filter(t=>!t.done).length;
   $('dayCount').textContent=items.length?`${items.length-left}/${items.length}`:'0';
   $('dBar').style.width=(items.length?(items.length-left)/items.length*100:0)+'%';
-  const cur=S.days[S.cal][sel]||derivedFmt(items);setEmoBtn($('dEmoji'),S.marks[S.cal][sel]);
+  const cur=dayFmt(S.cal,sel,items);setEmoBtn($('dEmoji'),S.marks[S.cal][sel]);
   $('fmt').innerHTML=FMT[S.cal].map((f,i)=>`<button class="fchip${cur===f.id?' on':''}${i?' out':''}" data-f="${f.id}">${f.ic}<span>${f.n}</span></button>`).join('');
   const L=$('list');
   const bd=S.cal==='w'?bdayOn(sel).map(b=>`<div class="bday">🎂 <span><b>${esc(b.n)}</b>${b.org?` <small>· ${esc(b.org)}</small>`:''}<br><small>день рождения</small></span></div>`).join(''):'';
@@ -948,7 +997,7 @@ function streak(){
   return n;
 }
 function render(dir){renderHello();
-  if(tab==='cal'){renderCal(dir);renderList(dir)}
+  if(tab==='cal'){renderCal(dir);renderList(dir);renderNotes()}
   else{$('month').textContent=MONTHS[view.m];$('year').textContent=view.y;
     if(tab==='stat')renderStats(dir);else if(tab==='hot')renderHotPage(dir);else if(tab==='pet')renderPet(dir);else renderHabPage(dir)}
   if(window.petBadge)petBadge();
@@ -1020,7 +1069,7 @@ const TABS=['cal','pet','hot','hab','stat'];
 function goTab(name){
   if(name===tab)return;const dir=TABS.indexOf(name)>TABS.indexOf(tab)?1:-1;tab=name;
   $('tabs').querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x.dataset.tab===tab));
-  $('cal').hidden=$('pCal').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';$('pPet').hidden=tab!=='pet';
+  $('cal').hidden=$('pCal').hidden=$('notesBox').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';$('pPet').hidden=tab!=='pet';
   $('seg').hidden=tab==='hot'||tab==='hab'||tab==='pet';
   scrollTo(0,0);render(dir);
 }
@@ -1031,7 +1080,8 @@ function renderStats(dir){
   const all=[];for(let i=1;i<=new Date(view.y,view.m+1,0).getDate();i++)all.push(...dayItems(null,`${ym}-${pad(i)}`));const T=all.filter(t=>t.cal===c);
   const done=T.filter(t=>t.done).length,pct=T.length?Math.round(done/T.length*100):0;
   const over=T.filter(t=>!t.done&&t.date<today).length;
-  const [fa,fb]=FMT[c],dd=[];for(let i=1;i<=new Date(view.y,view.m+1,0).getDate();i++){const k=`${ym}-${pad(i)}`,f=S.days[c][k]||derivedFmt(dayItems(c,k));if(f)dd.push([k,f])}
+  const [fa,fb]=FMT[c],dd=[];for(let i=1;i<=new Date(view.y,view.m+1,0).getDate();i++){const k=`${ym}-${pad(i)}`;if(k>=today)continue;const f=dayFmt(c,k);if(f)dd.push([k,f])}
+  const extra=FMT[c].slice(2).map(f=>[f,dd.filter(x=>x[1]===f.id).length]).filter(x=>x[1]);
   const na=dd.filter(x=>x[1]===fa.id).length,nb=dd.filter(x=>x[1]===fb.id).length,nf=na+nb;
   const ty=TYPES[c].map(y=>{const a=T.filter(t=>t.type===y.id);return{y,n:a.length,d:a.filter(t=>t.done).length}});
   const mx=Math.max(1,...ty.map(x=>x.n));
@@ -1055,8 +1105,10 @@ function renderStats(dir){
     <div class="cap"><span>1</span><span>${Math.ceil(dim/2)}</span><span>${dim}</span></div>
     <div class="cap" style="justify-content:flex-start;gap:14px"><span><i class="lgd a"></i>сделано</span><span><i class="lgd b"></i>в планах</span></div></div>
   <div class="card"><h4>${{w:'Где работал',s:'Как учился',p:'Где проводил время'}[c]}</h4>
-    ${nf?split(na,fa.n,nb,fb.n,nf)+`<div class="cap"><span>отмечено дней: ${nf}</span><span>${Math.round(nb/nf*100)}% ${{w:'удалённо',s:'в СДО',p:'дома'}[c]}</span></div>`
-      :`<div style="font-size:15px;color:var(--mut)">Отмечай дни в календаре: ${fa.n.toLowerCase()} или ${{w:'удалёнка',s:'СДО',p:'дома'}[c]}</div>`}</div>
+    ${nf?split(na,fa.n,nb,fb.n,nf)+`<div class="cap"><span>прошедших дней: ${nf}</span><span>${Math.round(nb/nf*100)}% ${{w:'удалённо',s:'в СДО',p:'дома'}[c]}</span></div>`
+      :`<div style="font-size:15px;color:var(--mut)">Отмечай дни в календаре: ${fa.n.toLowerCase()} или ${{w:'удалёнка',s:'СДО',p:'дома'}[c]}</div>`}
+    ${extra.length?`<div class="cap" style="justify-content:flex-start;gap:14px">${extra.map(([f,n])=>`<span>${f.x} ${f.n.toLowerCase()}: ${n} ${plural(n,['день','дня','дней'])}</span>`).join('')}</div>`:''}
+    <div class="cap"><span>Считаются только прошедшие дни — сегодня и будущее не входят</span></div></div>
   <div class="card"><h4>По пометкам</h4>
     ${ty.map(x=>`<div class="trow"><span class="tn"><i style="background:${x.y.c}"></i>${x.y.n}</span><span class="tr"><i style="width:${x.n/mx*100}%;background:${x.y.c}"></i></span><small>${x.d}/${x.n}</small></div>`).join('')}</div>
   <div class="card"><h4>Загрузка по дням недели</h4>
@@ -1080,13 +1132,13 @@ function setCal(c){
 $('seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setCal(b.dataset.c)});
 
 /* месяцы */
-function shiftMonth(n){view.m+=n;if(view.m<0){view.m=11;view.y--}if(view.m>11){view.m=0;view.y++}tab==='cal'?renderCal(n):render(n)}
+function shiftMonth(n){view.m+=n;if(view.m<0){view.m=11;view.y--}if(view.m>11){view.m=0;view.y++}tab==='cal'?(renderCal(n),renderNotes()):render(n)}
 $('prev').onclick=()=>shiftMonth(-1);$('next').onclick=()=>shiftMonth(1);
 $('titleBtn').onclick=()=>{const t=new Date();const dir=Math.sign((t.getFullYear()-view.y)*12+t.getMonth()-view.m);view={y:t.getFullYear(),m:t.getMonth()};sel=iso(t);render(dir||0)};
 $('grid').addEventListener('click',e=>{
   const b=e.target.closest('.day');if(!b||swiped)return;
   sel=b.dataset.d;const d=fromIso(sel);
-  if(d.getMonth()!==view.m){const dir=d<new Date(view.y,view.m,1)?-1:1;view={y:d.getFullYear(),m:d.getMonth()};renderCal(dir)}else renderCal();
+  if(d.getMonth()!==view.m){const dir=d<new Date(view.y,view.m,1)?-1:1;view={y:d.getFullYear(),m:d.getMonth()};renderCal(dir);renderNotes()}else renderCal();
   renderList();
 });
 /* свайп по календарю: влево-вправо месяцы */
@@ -1242,7 +1294,7 @@ $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse((await f.text()).replace(/^\ufeff/,''));if(!Array.isArray(d.tasks))throw 0;
     if(!confirm(`Заменить текущие задачи задачами из файла (${d.tasks.length} шт.)?`))return;
-    S=Object.assign({theme:S.theme,cal:'w',days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
+    S=Object.assign({theme:S.theme,cal:'w',notes:[],days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
   catch(_){alert('Это не файл копии Делагочи')}
   e.target.value='';
 };
@@ -1251,7 +1303,7 @@ $('demoBtn').onclick=()=>{if(!confirm('Убрать все примеры зад
 /* формат дня: нажать — выбрать, нажать ещё раз — снять */
 $('fmt').addEventListener('click',e=>{
   const b=e.target.closest('.fchip');if(!b)return;
-  setMap('days',S.cal,sel,S.days[S.cal][sel]===b.dataset.f?null:b.dataset.f);
+  const cur=dayFmt(S.cal,sel),v=b.dataset.f;setMap('days',S.cal,sel,cur===v?(derivedFmt(dayItems(S.cal,sel))?'none':null):v);
   save();haptic(8);renderCal();renderList();
 });
 
@@ -1288,7 +1340,7 @@ const gh=(path,opt={})=>fetch('https://api.github.com'+path,{...opt,cache:'no-st
   headers:{Authorization:'Bearer '+token(),Accept:'application/vnd.github+json','Content-Type':'application/json'}});
 const b64e=str=>{const b=new TextEncoder().encode(str);let r='';for(let i=0;i<b.length;i+=8192)r+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(r)};
 const b64d=str=>new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\n/g,'')),c=>c.charCodeAt(0)));
-const shared=x=>JSON.stringify({notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
+const shared=x=>JSON.stringify({notes:x.notes,notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
 function merge(r){
   const T={};
   for(const t of [...S.tasks,...(r.tasks||[])]){const o=T[t.id];if(!o||(t.u||0)>(o.u||0))T[t.id]=t}
@@ -1302,7 +1354,7 @@ function merge(r){
       if(k in R&&(rs>ls||!(k in L))){L[k]=R[k];if(rs)S.st[key]=rs}
     }
   }
-  for(const key of['bdays','habits']){
+  for(const key of['bdays','habits','notes']){
     const M={};for(const t of[...(S[key]||[]),...(r[key]||[])]){const o=M[t.id];if(!o||(t.u||0)>(o.u||0))M[t.id]=t}
     S[key]=Object.values(M).filter(t=>!(S.gone[t.id]>=(t.u||0)));
   }
@@ -1632,8 +1684,8 @@ $('resetBtn').onclick=()=>{
   if(!confirm('Сбросить всё: дела, отметки дней, смайлики, привычки и дни рождения? Отменить будет нельзя. Если нужна копия — сначала «Сохранить в файл».'))return;
   if(!confirm('Точно сбросить? Если включена синхронизация, всё очистится и на других твоих устройствах.'))return;
   const now=Date.now();
-  for(const t of[...S.tasks,...S.bdays,...S.habits])S.gone[t.id]=now;
-  S.tasks=[];S.bdays=[];S.habits=[];
+  for(const t of[...S.tasks,...S.bdays,...S.habits,...S.notes])S.gone[t.id]=now;
+  S.tasks=[];S.bdays=[];S.habits=[];S.notes=[];
   for(const kind of['days','marks','rdone'])for(const c of CALS)for(const k in S[kind][c])setMap(kind,c,k,null);
   for(const k in S.hab){S.hab[k]=null;S.st['h'+k]=now}
   S.daysDemo=false;save();hide();render();haptic([20,60,20]);
@@ -1810,6 +1862,51 @@ $('pPet').addEventListener('click',e=>{
 function bipTick(){const before=CH.msgs.length;bipThink();if(CH.msgs.length!==before){petBadge();if(tab==='pet')renderPet()}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(bipTick,800)});
 setTimeout(bipTick,1500);
+
+/* отметка за период: отпуск с … по …, только будни */
+$('rngBtn').onclick=()=>{
+  $('rngKind').innerHTML=FMT[S.cal].map(f=>`<option value="${f.id}">${f.x?f.x+' ':''}${f.n}</option>`).join('')+'<option value="">Снять отметки</option>';
+  $('rngKind').value=FMT[S.cal][2]?FMT[S.cal][FMT[S.cal].length-1].id:FMT[S.cal][0].id;
+  $('rngFrom').value=sel;$('rngTo').value=addDay(sel,6);$('rngWd').checked=S.cal!=='p';$('rngErr').textContent='';show($('rngSheet'));
+};
+$('rngSave').onclick=()=>{
+  const a=$('rngFrom').value,b=$('rngTo').value,v=$('rngKind').value;
+  if(!a||!b||b<a){$('rngErr').textContent='Проверь даты: «по» не раньше, чем «с»';return}
+  let k=a,n=0;while(k<=b&&n<400){const w=fromIso(k).getDay();if(!$('rngWd').checked||(w>0&&w<6))setMap('days',S.cal,k,v||(derivedFmt(dayItems(S.cal,k))?'none':null));k=addDay(k,1);n++}
+  save();hide();render();haptic(12);
+};
+/* мысли на месяц */
+const nm=()=>`${view.y}-${pad(view.m+1)}`;
+const hash=s=>{let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)/4294967296};
+let noteEdit=null,lastNoteId=null;
+function renderNotes(){
+  const box=$('notesBox'),list=S.notes.filter(n=>n.m===nm());
+  box.innerHTML=`<div class="notes-h"><b>💭 Мысли на ${MONTHS[view.m]}</b><button id="noteAdd">＋ Мысль</button></div><div class="pile" id="pile">${list.length?'':'<div class="pile-empty">Сюда можно бросать мысли, идеи и планы на месяц — они будут лежать кучкой</div>'}</div>`;
+  const pile=$('pile'),W=pile.clientWidth||340,sky=new Array(Math.ceil(W/4)).fill(0);let maxH=0;
+  list.forEach((n,i)=>{
+    const r=hash(n.id),r2=hash(n.id+'x'),el=document.createElement('button');
+    el.className='pill '+(r<.45?'f':'o')+(n.id===lastNoteId?' drop':'');el.dataset.n=n.id;el.textContent=n.t;
+    const fs=n.t.length<10?20:n.t.length<22?17:14;el.style.fontSize=fs+'px';pile.appendChild(el);
+    const w=Math.min(el.offsetWidth,W*.92),h=el.offsetHeight,ang=Math.round((r2-.5)*(w>W*.5?24:w>W*.3?44:70)),rad=Math.abs(ang)*Math.PI/180;
+    const bw=w*Math.cos(rad)+h*Math.sin(rad),bh=w*Math.sin(rad)+h*Math.cos(rad);
+    /* падает туда, где куча ниже всего: пробуем 12 мест по ширине */
+    const skyAt=x=>{let y=0;for(let j=Math.floor(x/4);j<Math.ceil((x+bw)/4)&&j<sky.length;j++)y=Math.max(y,sky[j]);return y};
+    let x=0,y=1e9;for(let c=0;c<12;c++){const cx=Math.max(0,Math.min(W-bw,(c/11)*(W-bw)+(hash(n.id+c)-.5)*18)),cy=skyAt(cx)+hash(n.id+'j'+c)*3;if(cy<y){y=cy;x=cx}}
+    y=skyAt(x);const a=Math.floor(x/4),b=Math.ceil((x+bw)/4);
+    y=Math.max(0,y-bh*.12);for(let j=a;j<b&&j<sky.length;j++)sky[j]=y+bh*.94;maxH=Math.max(maxH,y+bh);
+    el.style.left=(x+(bw-w)/2)+'px';el.style.bottom=(y+(bh-h)/2)+'px';el.style.transform=`rotate(${ang}deg)`;el.style.zIndex=i+1;
+  });
+  pile.style.setProperty('--ph',Math.max(list.length?150:110,Math.min(420,maxH+16))+'px');
+  lastNoteId=null;
+}
+function openNote(n){noteEdit=n||null;$('noteTitle').textContent=n?'Мысль':'Новая мысль';$('noteText').value=n?n.t:'';$('noteErr').textContent='';$('noteDelWrap').style.display=n?'block':'none';show($('noteSheet'));setTimeout(()=>$('noteText').focus(),350)}
+$('notesBox').addEventListener('click',e=>{if(e.target.closest('#noteAdd'))return openNote();const p=e.target.closest('[data-n]');if(p)openNote(S.notes.find(x=>x.id===p.dataset.n))});
+$('noteSave').onclick=()=>{
+  const t=$('noteText').value.trim().replace(/\s+/g,' ');if(!t){$('noteErr').textContent='Напиши мысль';return}
+  if(noteEdit){noteEdit.t=t;noteEdit.u=Date.now()}else{const n={id:newId(),m:nm(),t,u:Date.now()};S.notes.push(n);lastNoteId=n.id}
+  save();hide();renderNotes();haptic(10);
+};
+$('noteDel').onclick=()=>{if(!noteEdit||!confirm('Удалить мысль?'))return;S.gone[noteEdit.id]=Date.now();S.notes=S.notes.filter(x=>x!==noteEdit);save();hide();renderNotes()};
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

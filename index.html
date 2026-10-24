@@ -317,6 +317,26 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
 .slide.drag .sl-knob{transition:none;cursor:grabbing}
 .slide.done .sl-knob{opacity:0;transition:opacity .2s}
 
+/* первый вход: знакомство */
+.onb{position:fixed;inset:0;z-index:40;display:none;align-items:flex-end;background:#6B3CF6;color:#fff;
+  padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 28px);transition:opacity .4s,transform .5s var(--ease)}
+.onb.on{display:flex}
+.onb.hide{opacity:0;transform:translateY(-30px);pointer-events:none}
+.onb-in{width:100%;max-width:440px;margin:0 auto}
+.onb-badge{width:64px;height:64px;border-radius:50%;background:#D4FF3A;color:#121212;display:grid;place-items:center;font-size:30px;margin-bottom:22px}
+.onb h1{font-size:52px;font-weight:800;letter-spacing:-.05em;line-height:.95}
+.onb p{font-size:16px;line-height:1.45;color:rgba(255,255,255,.72);margin:16px 0 26px}
+.onb-field{width:100%;font:inherit;font-size:22px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:0;border-radius:20px;padding:18px 20px;outline:none;-webkit-appearance:none;appearance:none}
+.onb-field::placeholder{color:rgba(255,255,255,.5)}
+.onb .err{color:#D4FF3A;margin:8px 4px 0;font-weight:600}
+.onb .or-btn{margin-top:16px}
+.onb .or-btn span{background:#D4FF3A;color:#121212}
+.help{padding:16px 18px;font-size:15px;line-height:1.5}
+.help ol{padding-left:20px;display:grid;gap:10px}
+.help a{color:#6B3CF6;font-weight:600}
+.help p{margin-top:12px;color:var(--mut)}
+.sheet{max-height:92dvh;overflow-y:auto}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -377,6 +397,17 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
   </div>
 </div>
 
+<div class="onb" id="onb" role="dialog" aria-modal="true" aria-labelledby="onbT">
+  <div class="onb-in">
+    <div class="onb-badge" aria-hidden="true">✦</div>
+    <h1 id="onbT">Привет!<br>Как тебя<br>зовут?</h1>
+    <p>Имя нужно, чтобы планер обращался к тебе. Все задачи хранятся только на твоём устройстве.</p>
+    <input class="onb-field" id="onbName" placeholder="Имя" autocomplete="given-name" enterkeyhint="go" maxlength="30">
+    <div class="err" id="onbErr"></div>
+    <button class="or-btn" id="onbGo">Начать<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+  </div>
+</div>
+
 <div class="fade" aria-hidden="true"></div>
 <nav class="tabs" id="tabs">
   <div class="tb2">
@@ -405,6 +436,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
 <div class="sheet ios" id="menuSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <div class="nav"><span></span><b>Настройки</b><button class="done" data-close>Готово</button></div>
+  <div class="ghead">Профиль</div>
+  <div class="group"><label class="cell"><span>Имя</span><input class="cin r" id="nameIn" autocomplete="off" maxlength="30"></label></div>
   <div class="ghead">Тема</div>
   <div class="seg small" id="themeSeg" data-v="light">
     <span class="pill"></span>
@@ -419,9 +452,24 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-
   <div class="group">
     <label class="cell"><span>Ключ GitHub</span><input class="cin r" id="tokIn" type="password" placeholder="вставь ключ" autocomplete="off"></label>
     <button class="cell" id="syncBtn"><span id="syncSt" style="color:var(--mut);font-size:15px">Не подключено</span><b style="font-weight:600">Обновить</b></button>
+    <button class="cell" id="syncHelp"><span>Как подключить</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
   <div class="group" id="demoWrap"><button class="cell red" id="demoBtn">Убрать примеры</button></div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
+</div>
+
+<div class="sheet ios" id="helpSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><span></span><b>Синхронизация</b><button class="done" data-close>Готово</button></div>
+  <div class="group help">
+    <ol>
+      <li>Заведи бесплатный аккаунт на <a href="https://github.com/signup" target="_blank" rel="noopener">github.com</a>.</li>
+      <li>Создай закрытое хранилище: <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a> → имя <b>planer-data</b> → <b>Private</b> → галочка «Add a README» → Create.</li>
+      <li>Сделай ключ: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">новый ключ</a> → доступ только к <b>planer-data</b> → Contents: <b>Read and write</b> → Generate.</li>
+      <li>Скопируй ключ и вставь в поле «Ключ GitHub» на каждом своём устройстве.</li>
+    </ol>
+    <p>Задачи лежат в твоём закрытом хранилище — их видишь только ты.</p>
+  </div>
 </div>
 
 <div class="sheet ios" id="emojiSheet" role="dialog" aria-modal="true">
@@ -535,7 +583,7 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&qu
 const plural=(n,f)=>f[(n%10===1&&n%100!==11)?0:(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?1:2];
 function renderHello(){
   const n=S.tasks.filter(t=>t.date===iso(new Date())&&!t.done).length;
-  $('hello').innerHTML=`Привет, Руслан! ${n?`Сегодня ${n} ${plural(n,['дело','дела','дел'])}`:'Сегодня свободно'} <span class="hchip">✦ предсказание</span>`;
+  $('hello').innerHTML=`Привет, ${esc(S.name||'друг')}! ${n?`Сегодня ${n} ${plural(n,['дело','дела','дел'])}`:'Сегодня свободно'} <span class="hchip">✦ предсказание</span>`;
 }
 function render(dir){renderHello();
   if(tab==='cal'){renderCal(dir);renderList(dir)}
@@ -658,7 +706,7 @@ $('fSave').onclick=()=>{
 $('fDel').onclick=()=>{if(!editing)return;if(!confirm('Удалить задачу «'+editing.title+'»?'))return;S.gone[editing.id]=Date.now();S.tasks=S.tasks.filter(x=>x!==editing);save();hide();render()};
 
 /* настройки */
-$('menuBtn').onclick=()=>{$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
+$('menuBtn').onclick=()=>{$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
 $('themeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.theme=b.dataset.t;save();applyTheme();render()}});
 $('exportBtn').onclick=()=>{
   const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
@@ -771,6 +819,8 @@ $('tokIn').addEventListener('change',e=>{
   owner=null;e.target.value='';e.target.placeholder='ключ сохранён';sync();
 });
 $('syncBtn').onclick=()=>sync();
+$('syncHelp').onclick=()=>show($('helpSheet'));
+$('nameIn').addEventListener('change',e=>{const v=e.target.value.trim();if(v){S.name=v;save();renderHello()}else e.target.value=S.name||''});
 addEventListener('online',sync);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 setInterval(()=>{if(!document.hidden)sync()},60000);
@@ -815,8 +865,18 @@ kn.addEventListener('pointerup',endSlide);kn.addEventListener('pointercancel',en
 sl.addEventListener('keydown',e=>{if(['Enter',' ','ArrowRight'].includes(e.key)){e.preventDefault();smax=sl.clientWidth-60;setSlide(smax);acceptSlide()}});
 $('oracle').addEventListener('click',e=>{if(e.target.id==='oracle')closeOracle()});
 $('hello').onclick=()=>oracleToday(true);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){oracleToday(false);renderHello()}});
-setTimeout(()=>oracleToday(false),600);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(S.name)oracleToday(false);renderHello()}});
+function askName(){$('onb').classList.add('on');setTimeout(()=>$('onbName').focus(),350)}
+$('onbGo').onclick=()=>{
+  const v=$('onbName').value.trim();
+  if(!v){$('onbErr').textContent='Напиши, как тебя зовут';$('onbName').focus();return}
+  S.name=v;save();renderHello();
+  $('onb').classList.add('hide');
+  setTimeout(()=>{$('onb').classList.remove('on','hide');oracleToday(false)},500);
+};
+$('onbName').addEventListener('keydown',e=>{if(e.key==='Enter')$('onbGo').click()});
+$('onbName').addEventListener('input',()=>$('onbErr').textContent='');
+if(!S.name)askName();else setTimeout(()=>oracleToday(false),600);
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

@@ -674,7 +674,8 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   <div class="qhint" id="qHint"></div>
   <div class="group">
     <label class="cell"><span>Дата</span><input class="pick" id="fDate" type="date"></label>
-    <label class="cell"><span>Время</span><input class="pick" id="fTime" type="time"></label>
+    <label class="cell"><span>Начало</span><input class="pick" id="fTime" type="time"></label>
+    <label class="cell"><span>Конец</span><input class="pick" id="fEnd" type="time"></label>
     <label class="cell"><span>Повтор</span><select class="pick" id="fRep"><option value="">Нет</option><option value="day">Каждый день</option><option value="wd">По будням</option><option value="week">Каждую неделю</option><option value="2week">Через неделю</option><option value="month">Каждый месяц</option></select></label>
     <label class="cell" id="fFmtRow"><span>Формат</span><select class="pick" id="fFmt"><option value="">—</option><option value="uni">Институт</option><option value="sdo">СДО</option></select></label>
   </div>
@@ -976,7 +977,7 @@ function renderList(dir){
   const today=iso(new Date());
   $('mvBtn').classList.toggle('on',left>0&&sel<=today);$('mvBtn').textContent=`Перенести несделанное на завтра · ${left}`;
   L.innerHTML=bd+(items.length?'<div class="lcard">'+items.map(t=>{const ty=typeOf(t.cal,t.type);
-    const meta=[t.time||'весь день',t.plat,t.fmt?(t.fmt==='uni'?'институт':'СДО'):'',t.rep?'↻':''].filter(Boolean).join(' · ');
+    const meta=[tspan(t)||'весь день',t.plat,t.fmt?(t.fmt==='uni'?'институт':'СДО'):'',t.rep?'↻':''].filter(Boolean).join(' · ');
     return `<div class="swr"><div class="sact l">✓ Готово</div><div class="sact r">Завтра →</div><div class="task${t.done?' done':''}" style="--c:${ty.c};--on:${ty.on}" data-id="${t.vid||t.id}">
       <button class="chk" data-chk aria-label="Отметить выполненной"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       <button class="tb" data-edit><div class="tt">${t.emoji?`<span class="temj">${t.emoji}</span>`:''}${esc(t.title)}</div><div class="tm">${esc(meta)}</div></button>
@@ -984,6 +985,7 @@ function renderList(dir){
     :`<div class="empty">${{w:'Рабочих дел нет',s:'Учебных дел нет',p:'Личных дел нет'}[S.cal]}. Нажми «+», чтобы добавить.</div>`);
   if(dir){L.classList.remove('anim-l','anim-r');void L.offsetWidth;L.classList.add(dir>0?'anim-l':'anim-r')}
 }
+const tspan=t=>t.time?(t.end?`${t.time}–${t.end}`:t.time):'';
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const plural=(n,f)=>f[(n%10===1&&n%100!==11)?0:(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?1:2];
 function renderHello(){
@@ -1026,7 +1028,7 @@ function renderHotPage(dir){
   const when=i=>i<0?'просрочено':i===0?'сегодня':i===1?'завтра':`через ${i} ${plural(i,['день','дня','дней'])}`;
   const row=({t,k,i})=>{const ty=typeOf(t.cal,t.type);
     return `<div class="hrow" data-go="${t.cal}|${k}"><button class="chk" data-hchk="${t.vid||t.id}" style="--c:${ty.c};--on:${ty.on}" aria-label="Отметить выполненной"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
-      <span class="hb-t"><b>${t.emoji?t.emoji+' ':''}${esc(t.title)}</b><small>${CAL_N[t.cal]} · ${dateTxt(k)}${t.time?' · '+t.time:''}</small></span><span class="hwhen${i<0?' over':''}">${when(i)}</span></div>`};
+      <span class="hb-t"><b>${t.emoji?t.emoji+' ':''}${esc(t.title)}</b><small>${CAL_N[t.cal]} · ${dateTxt(k)}${t.time?' · '+tspan(t):''}</small></span><span class="hwhen${i<0?' over':''}">${when(i)}</span></div>`};
   const sec=(name,list)=>list.length?`<div class="hsec"><h3>${name} · ${list.length}</h3><div class="hcard">${list.map(row).join('')}</div></div>`:'';
   const P=$('pHot');
   P.innerHTML=`<div class="hhero">${total?`<b>${total}</b><span>${plural(total,['дело горит','дела горят','дел горят'])}</span>`:'<b>🎉</b><span>Ничего не горит</span>'}</div>`
@@ -1223,7 +1225,7 @@ $('fTypes').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b)
 function openTask(t){
   editing=t||null;
   $('shTitle').textContent=t?'Задача':{w:'Рабочая задача',s:'Учебная задача',p:'Личное дело'}[S.cal];
-  $('fTitle').value=t?t.title:'';$('fDate').value=t?t.date:sel;$('fTime').value=t?t.time:'';
+  $('fTitle').value=t?t.title:'';$('fDate').value=t?t.date:sel;$('fTime').value=t?t.time:'';$('fEnd').value=(t&&t.end)||'';
   fType=t?t.type:TYPES[S.cal][0].id;$('fErr').textContent='';fEmo=(t&&t.emoji)||'';setEmoBtn($('fEmoji'),fEmo);
   $('fRep').value=t&&t.rep?t.rep.k:'';$('fFmt').value=(t&&t.fmt)||'';$('fPlat').value=(t&&t.plat)||'';$('fStage').value=(t&&t.stage)||'idea';
   $('fFmtRow').style.display=S.cal==='s'?'':'none';$('focusWrap').style.display=t?'block':'none';$('qHint').textContent='';qman={};
@@ -1233,7 +1235,7 @@ function openTask(t){
 }
 $('fab').onclick=()=>openTask();
 $('fTitle').addEventListener('input',()=>{$('fErr').textContent='';if(!editing)applyQuick()});
-$('fDate').addEventListener('input',()=>qman.date=true);$('fTime').addEventListener('input',()=>qman.time=true);
+$('fDate').addEventListener('input',()=>qman.date=true);$('fTime').addEventListener('input',()=>qman.time=true);$('fEnd').addEventListener('input',()=>{qman.end=true;$('fErr').textContent=''});
 
 /* быстрая строка: «пост завтра 14:00», «зачёт в пт в 10», «эссе 25.10» */
 let qman={};
@@ -1250,7 +1252,9 @@ function quickParse(str){
   if(!date&&(m=take(/\sчерез\s(\d{1,2})\s(?:дн[яейь]*|день)(?=\s)/i)))date=plus(+m[1]);
   if(!date&&(m=take(/\s(?:во?\s)?(пн|вт|ср|чт|пт|сб|вс|понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)(?=\s)/i))){
     const w=WDS.findIndex(x=>x.includes(m[1].toLowerCase()));let n=(w-T.getDay()+7)%7||7;date=plus(n)}
-  if((m=take(/\sв\s(\d{1,2})[:.](\d{2})(?=\s)/i))||(m=take(/\s(\d{1,2}):(\d{2})(?=\s)/)))time=pad(+m[1])+':'+m[2];
+  let end=null;
+  if(m=take(/\s(?:с\s)?(\d{1,2})(?:[:.](\d{2}))?\s?(?:-|–|—|до\s)\s?(\d{1,2})(?:[:.](\d{2}))?(?=\s)/i)){if(+m[1]<24&&+m[3]<24){time=pad(+m[1])+':'+(m[2]||'00');end=pad(+m[3])+':'+(m[4]||'00')}}
+  else if((m=take(/\sв\s(\d{1,2})[:.](\d{2})(?=\s)/i))||(m=take(/\s(\d{1,2}):(\d{2})(?=\s)/)))time=pad(+m[1])+':'+m[2];
   else if(m=take(/\sв\s(\d{1,2})(?:\s(утра|дня|вечера))?(?=\s)/i)){let h=+m[1];if(m[2]&&/дня|вечера/i.test(m[2])&&h<12)h+=12;if(h<24)time=pad(h)+':00'}
   if(!date&&(m=s.match(/\s(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?(?=\s)/))&&+m[2]>=1&&+m[2]<=12){s=s.replace(m[0],' ');
     let y=m[3]?(+m[3]<100?2000+ +m[3]:+m[3]):T.getFullYear();date=new Date(y,+m[2]-1,+m[1]);if(!m[3]&&date<T)date.setFullYear(y+1)}
@@ -1258,12 +1262,13 @@ function quickParse(str){
   const low=str.toLowerCase();let type=null,cal=null;
   for(const c of[S.cal,...CALS.filter(x=>x!==S.cal)]){const f=KW[c].find(([,re])=>re.test(low));if(f){type=f[0];cal=c;break}}
   let title=s.replace(/\s+/g,' ').trim();title=title.charAt(0).toUpperCase()+title.slice(1);
-  return {title,date:date&&iso(date),time,type,cal};
+  return {title,date:date&&iso(date),time,end,type,cal};
 }
 function applyQuick(){
   const q=quickParse($('fTitle').value),hint=[];
   if(q.date&&!qman.date){$('fDate').value=q.date;const d=fromIso(q.date);hint.push(`${d.getDate()} ${MONTHS_G[d.getMonth()]}`)}
-  if(q.time&&!qman.time){$('fTime').value=q.time;hint.push(q.time)}
+  if(q.time&&!qman.time){$('fTime').value=q.time;hint.push(q.end?`${q.time}–${q.end}`:q.time)}
+  if(q.end&&!qman.end)$('fEnd').value=q.end;
   if(q.type&&q.cal===S.cal&&!qman.type){fType=q.type;renderTypes();hint.push(typeOf(S.cal,q.type).n)}
   $('qHint').textContent=hint.length?'✦ '+hint.join(' · '):'';
 }
@@ -1272,8 +1277,9 @@ $('fSave').onclick=()=>{
   let title=$('fTitle').value.trim();
   if(!editing&&title){const q=quickParse(title);if(q.title)title=q.title}
   if(!title){$('fErr').textContent='Напиши, что нужно сделать';$('fTitle').focus();return}
-  const date=$('fDate').value||sel,time=$('fTime').value;
-  const extra={rep:$('fRep').value?{k:$('fRep').value}:null,fmt:S.cal==='s'?($('fFmt').value||null):null,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null};
+  const date=$('fDate').value||sel,time=$('fTime').value,end=time&&$('fEnd').value?$('fEnd').value:null;
+  if(end&&end<=time){$('fErr').textContent='Конец должен быть позже начала';return}
+  const extra={end,rep:$('fRep').value?{k:$('fRep').value}:null,fmt:S.cal==='s'?($('fFmt').value||null):null,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null};
   if(editing)Object.assign(editing,{title,date,time,type:fType,emoji:fEmo,...extra,demo:false,u:Date.now()});
   else S.tasks.push({id:newId(),cal:S.cal,date,time,title,type:fType,emoji:fEmo,...extra,done:false,u:Date.now()});
   save();sel=date;const d=fromIso(date);view={y:d.getFullYear(),m:d.getMonth()};hide();render();
@@ -1605,7 +1611,7 @@ function pdfList(items,title){
     if(t.done){x.fill();x.strokeStyle='#FFFFFF';x.lineWidth=7;x.beginPath();x.moveTo(PM+18,y+47);x.lineTo(PM+27,y+57);x.lineTo(PM+44,y+36);x.stroke()}else x.stroke();
     if(ty.c.toUpperCase()==='#FFFFFF'){x.strokeStyle='#121212';x.lineWidth=2;x.beginPath();x.arc(PM+30,y+46,30,0,7);x.stroke()}
     x.fillStyle=t.done?'#9A9A9A':'#121212';x.font=PF(600,46);lines.forEach((l,i)=>x.fillText(l,PM+100,y+62+i*58));
-    const meta=[t.time||'весь день',CAL_N[t.cal],t.plat,t.type==='ct'?STAGE[t.stage||'idea']:'',t.fmt?(t.fmt==='uni'?'институт':'СДО'):''].filter(Boolean).join(' · ');
+    const meta=[tspan(t)||'весь день',CAL_N[t.cal],t.plat,t.type==='ct'?STAGE[t.stage||'idea']:'',t.fmt?(t.fmt==='uni'?'институт':'СДО'):''].filter(Boolean).join(' · ');
     x.fillStyle='#8A8A8A';x.font=PF(500,32);x.fillText(meta,PM+100,y+62+lines.length*58);
     x.font=PF(700,32);const tw=x.measureText(ty.n).width+48;x.fillStyle=ty.c;pRR(x,PW-PM-tw,y+20,tw,64,32);x.fill();
     x.strokeStyle='rgba(0,0,0,.14)';x.lineWidth=3;x.stroke();x.fillStyle=ty.on;x.fillText(ty.n,PW-PM-tw+24,y+63);
@@ -1617,7 +1623,7 @@ function pdfFree(title){
   const days=shRange(),pages=[];let P=pPage(),x=P.x;pages.push(P);
   let y=pHero(x,title,`${shPeriodTxt()} · ${[...SH.cals].map(c=>CAL_N[c]).join(', ')}`);
   const busy=k=>{const it=[];for(const c of CALS)if(SH.cals.has(c))it.push(...dayItems(c,k));return it};
-  const times=it=>{const ts=[...new Set(it.filter(t=>t.time).map(t=>t.time))].sort();if(it.some(t=>!t.time))ts.push('дела без времени');return ts};
+  const times=it=>{const ts=[...new Set(it.filter(t=>t.time).map(tspan))].sort();if(it.some(t=>!t.time))ts.push('дела без времени');return ts};
   let free=0;
   if(SH.per==='month'){
     const gap=16,cw=(PW-PM*2-gap*6)/7,ch=226,first=fromIso(days[0]),off=(first.getDay()+6)%7;

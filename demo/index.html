@@ -561,6 +561,13 @@ html.dark-over,html.dark-over body{background:#121212}
 .pile-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);font-size:14px;text-align:center;padding:0 24px}
 textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
 
+.tplh{display:flex;justify-content:space-between;align-items:center}
+.tplh button{font-size:13px;font-weight:700;color:#6B3CF6;text-transform:none;letter-spacing:0}
+#tplList{margin-bottom:14px}
+#tplList .chip{gap:6px}
+#tplList .chip .x{font-size:15px;line-height:1;margin-left:2px;opacity:.7}
+#tplList.edit .chip{background:var(--cell);box-shadow:inset 0 0 0 1.5px #FF3B30;color:#FF3B30}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -671,6 +678,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   <div class="group"><div class="cell"><button class="emo" id="fEmoji" aria-label="Смайлик задачи"></button><input class="cin" id="fTitle" placeholder="Что нужно сделать" autocomplete="off" enterkeyhint="done"></div></div>
   <div class="err" id="fErr"></div>
   <div class="qhint" id="qHint"></div>
+  <div id="tplBox"><div class="ghead tplh"><span>Шаблоны</span><button id="tplEdit">Изменить</button></div><div class="chips opt" id="tplList"></div></div>
   <div class="group">
     <label class="cell"><span>Дата</span><input class="pick" id="fDate" type="date"></label>
     <label class="cell"><span>Начало</span><input class="pick" id="fTime" type="time"></label>
@@ -687,6 +695,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
       <label class="cell"><span>Стадия</span><select class="pick" id="fStage"><option value="idea">Идея</option><option value="work">В работе</option><option value="review">На согласовании</option><option value="pub">Опубликовано</option></select></label>
     </div>
   </div>
+  <div class="group"><button class="cell" id="tplSave" style="justify-content:center;font-weight:700">★ Сохранить как шаблон</button></div>
   <div class="group" id="focusWrap"><button class="cell" id="focusBtn"><span>⏱ Фокус 25 минут</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>
   <div class="group" id="fDelWrap"><button class="cell red" id="fDel">Удалить задачу</button></div>
 </div>
@@ -865,7 +874,7 @@ let S=load()||{tasks:seed(),theme:'light',cal:'w'};
 if(!S.days){S.days=seedDays();S.daysDemo=true}
 if(!S.marks)S.marks={w:{},s:{}};
 if(!S.gone)S.gone={};if(!S.st)S.st={};
-if(!S.notes)S.notes=[];if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
+if(!S.notes)S.notes=[];if(!S.tpls)S.tpls=[];if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
 /* смена отметки дня с меткой времени — чтобы при синхронизации победила последняя правка */
 function setMap(kind,cal,date,val){S[kind][cal][date]=val;S.st[kind[0]+cal+date]=Date.now()}
 let tab='cal';
@@ -1227,6 +1236,7 @@ function openTask(t){
   $('fTitle').value=t?t.title:'';$('fDate').value=t?t.date:sel;$('fTime').value=t?t.time:'';$('fEnd').value=(t&&t.end)||'';
   fType=t?t.type:TYPES[S.cal][0].id;$('fErr').textContent='';fEmo=(t&&t.emoji)||'';setEmoBtn($('fEmoji'),fEmo);
   $('fRep').value=t&&t.rep?t.rep.k:'';$('fFmt').value=(t&&t.fmt)||'';$('fPlat').value=(t&&t.plat)||'';$('fStage').value=(t&&t.stage)||'idea';
+  tplEditing=false;renderTpls(!t);
   $('fFmtRow').style.display=S.cal==='s'?'':'none';$('focusWrap').style.display=t?'block':'none';$('qHint').textContent='';qman={};
   $('fDelWrap').style.display=t?'block':'none';
   renderTypes();show($('taskSheet'));
@@ -1300,7 +1310,7 @@ $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse((await f.text()).replace(/^\ufeff/,''));if(!Array.isArray(d.tasks))throw 0;
     if(!confirm(`Заменить текущие задачи задачами из файла (${d.tasks.length} шт.)?`))return;
-    S=Object.assign({theme:S.theme,cal:'w',notes:[],days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
+    S=Object.assign({theme:S.theme,cal:'w',notes:[],tpls:[],days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
   catch(_){alert('Это не файл копии Делагочи')}
   e.target.value='';
 };
@@ -1346,7 +1356,7 @@ const gh=(path,opt={})=>fetch('https://api.github.com'+path,{...opt,cache:'no-st
   headers:{Authorization:'Bearer '+token(),Accept:'application/vnd.github+json','Content-Type':'application/json'}});
 const b64e=str=>{const b=new TextEncoder().encode(str);let r='';for(let i=0;i<b.length;i+=8192)r+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(r)};
 const b64d=str=>new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\n/g,'')),c=>c.charCodeAt(0)));
-const shared=x=>JSON.stringify({notes:x.notes,notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
+const shared=x=>JSON.stringify({tpls:x.tpls,notes:x.notes,notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
 function merge(r){
   const T={};
   for(const t of [...S.tasks,...(r.tasks||[])]){const o=T[t.id];if(!o||(t.u||0)>(o.u||0))T[t.id]=t}
@@ -1360,7 +1370,7 @@ function merge(r){
       if(k in R&&(rs>ls||!(k in L))){L[k]=R[k];if(rs)S.st[key]=rs}
     }
   }
-  for(const key of['bdays','habits','notes']){
+  for(const key of['bdays','habits','notes','tpls']){
     const M={};for(const t of[...(S[key]||[]),...(r[key]||[])]){const o=M[t.id];if(!o||(t.u||0)>(o.u||0))M[t.id]=t}
     S[key]=Object.values(M).filter(t=>!(S.gone[t.id]>=(t.u||0)));
   }
@@ -1690,8 +1700,8 @@ $('resetBtn').onclick=()=>{
   if(!confirm('Сбросить всё: дела, отметки дней, смайлики, привычки и дни рождения? Отменить будет нельзя. Если нужна копия — сначала «Сохранить в файл».'))return;
   if(!confirm('Точно сбросить? Если включена синхронизация, всё очистится и на других твоих устройствах.'))return;
   const now=Date.now();
-  for(const t of[...S.tasks,...S.bdays,...S.habits,...S.notes])S.gone[t.id]=now;
-  S.tasks=[];S.bdays=[];S.habits=[];S.notes=[];
+  for(const t of[...S.tasks,...S.bdays,...S.habits,...S.notes,...S.tpls])S.gone[t.id]=now;
+  S.tasks=[];S.bdays=[];S.habits=[];S.notes=[];S.tpls=[];
   for(const kind of['days','marks','rdone'])for(const c of CALS)for(const k in S[kind][c])setMap(kind,c,k,null);
   for(const k in S.hab){S.hab[k]=null;S.st['h'+k]=now}
   S.daysDemo=false;save();hide();render();haptic([20,60,20]);
@@ -1913,6 +1923,33 @@ $('noteSave').onclick=()=>{
   save();hide();renderNotes();haptic(10);
 };
 $('noteDel').onclick=()=>{if(!noteEdit||!confirm('Удалить мысль?'))return;S.gone[noteEdit.id]=Date.now();S.notes=S.notes.filter(x=>x!==noteEdit);save();hide();renderNotes()};
+
+/* шаблоны задач: сохранить один раз — потом заполнять одним нажатием */
+let tplEditing=false;
+function renderTpls(show){
+  const list=S.tpls.filter(x=>x.cal===S.cal);
+  $('tplBox').style.display=show&&list.length?'':'none';
+  $('tplEdit').textContent=tplEditing?'Готово':'Изменить';
+  $('tplList').classList.toggle('edit',tplEditing);
+  $('tplList').innerHTML=list.map(x=>{const ty=typeOf(x.cal,x.type);return `<button class="chip" data-tp="${x.id}" style="--c:${ty.c};--on:${ty.on}"><i></i>${x.emoji?x.emoji+' ':''}${esc(x.title)}${x.time?` <small style="opacity:.6">${tspan(x)}</small>`:''}${tplEditing?'<span class="x">×</span>':''}</button>`}).join('');
+}
+$('tplEdit').onclick=()=>{tplEditing=!tplEditing;renderTpls(true)};
+$('tplList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-tp]');if(!b)return;const x=S.tpls.find(y=>y.id===b.dataset.tp);if(!x)return;
+  if(tplEditing){if(!confirm(`Удалить шаблон «${x.title}»?`))return;S.gone[x.id]=Date.now();S.tpls=S.tpls.filter(y=>y!==x);save();renderTpls(true);return}
+  $('fTitle').value=x.title;$('fTime').value=x.time||'';$('fEnd').value=x.end||'';fType=x.type;fEmo=x.emoji||'';setEmoBtn($('fEmoji'),fEmo);
+  $('fPlat').value=x.plat||'';$('fStage').value=x.stage||'idea';$('fFmt').value=x.fmt||'';$('fRep').value='';
+  qman={time:true,end:true,type:true};renderTypes();$('qHint').textContent='✦ Из шаблона — выбери дату и нажми «Готово»';$('fErr').textContent='';haptic(8);
+});
+$('tplSave').onclick=()=>{
+  let title=$('fTitle').value.trim();if(!editing&&title){const q=quickParse(title);if(q.title)title=q.title}
+  if(!title){$('fErr').textContent='Сначала напиши название задачи';$('fTitle').focus();return}
+  const time=$('fTime').value||null,end=time&&$('fEnd').value?$('fEnd').value:null;
+  const same=S.tpls.find(x=>x.cal===S.cal&&x.title.toLowerCase()===title.toLowerCase());
+  const data={cal:S.cal,title,type:fType,emoji:fEmo,time,end,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null,fmt:S.cal==='s'?($('fFmt').value||null):null,u:Date.now()};
+  if(same)Object.assign(same,data);else S.tpls.push({id:newId(),...data});
+  save();haptic(12);$('qHint').textContent=same?'✦ Шаблон обновлён':'✦ Шаблон сохранён — он появится в новой задаче';
+};
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

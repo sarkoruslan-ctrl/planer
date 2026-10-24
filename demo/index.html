@@ -509,6 +509,38 @@ html.dark-over,html.dark-over body{background:#121212}
 /* мышь: подсказка, что можно нажать */
 @media (hover:hover){.task .tb:hover .tt,.hrow:hover b{text-decoration:underline;text-underline-offset:3px}button{cursor:pointer}}
 
+/* вкладка «Бип»: обычные карточки, пиксельный — только сам питомец */
+.tabs .tb2 button{width:50px}
+.petcard{background:#121212;color:#fff;border-radius:28px;padding:16px;margin:22px 0 14px}
+:root[data-theme="dark"] .petcard,:root[data-theme="dark"] .bubble.bip{background:#222226}
+.pet-lcd{background:#C9E265;border-radius:20px;height:150px;display:grid;place-items:center;position:relative;overflow:hidden;cursor:pointer;transition:background .5s}
+.pet-lcd.night{background:#4D5726}
+.pet-lcd svg{width:96px;height:auto;transition:transform .18s steps(2)}
+.pet-lcd.jump svg{transform:translateY(-12px)}
+.pet-say{position:absolute;left:12px;right:12px;top:10px;text-align:center;font-size:13px;font-weight:700;color:#2E3A12;opacity:0;transition:opacity .25s}
+.pet-say.on{opacity:1}
+.pet-lcd.night .pet-say{color:#C9E265}
+.pet-head{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 10px}
+.pet-head b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.pet-head small{font-size:13px;color:rgba(255,255,255,.6)}
+.need{display:grid;grid-template-columns:96px 1fr 38px;align-items:center;gap:10px;font-size:13px;margin-top:8px;color:rgba(255,255,255,.8)}
+.need .tr{height:10px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.need .tr i{display:block;height:100%;border-radius:5px;transition:width .6s var(--ease)}
+.need em{font-style:normal;text-align:right;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums}
+.chat{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.bubble{max-width:86%;padding:11px 14px;border-radius:20px;font-size:15px;line-height:1.4}
+.bubble.bip{align-self:flex-start;background:#121212;color:#fff;border-bottom-left-radius:6px}
+.bubble.me{align-self:flex-end;background:var(--inv-bg);color:var(--inv-fg);border-bottom-right-radius:6px;font-weight:600}
+.bubble time{display:block;font-size:11px;opacity:.5;margin-top:4px}
+.bacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.bacts button{padding:7px 12px;border-radius:999px;background:#D4FF3A;color:#121212;font-size:13px;font-weight:800}
+.bacts button.ghost{background:rgba(255,255,255,.12);color:#fff}
+.quick{display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:2px 20px 6px;scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.quick button{flex:none;padding:10px 14px;border-radius:999px;background:var(--soft);color:var(--fg);font-size:14px;font-weight:700}
+.chat-empty{color:var(--mut);font-size:14px;text-align:center;padding:8px 0}
+@media (max-width:370px){.tabs .tb2 button{width:42px}.pet-lcd{height:128px}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -551,6 +583,7 @@ html.dark-over,html.dark-over body{background:#121212}
     <div id="list"></div>
   </main>
   <main id="pStat" hidden></main>
+  <main id="pPet" hidden></main>
   <main id="pHot" hidden></main>
   <main id="pHab" hidden></main>
 </div>
@@ -600,6 +633,7 @@ html.dark-over,html.dark-over body{background:#121212}
 <nav class="tabs" id="tabs">
   <div class="tb2">
     <button data-tab="cal" class="on" aria-label="Календарь"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+    <button data-tab="pet" aria-label="Бип"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="13" rx="4"/><path d="M9 20.5h6"/><circle cx="9.5" cy="10.5" r=".9" fill="currentColor"/><circle cx="14.5" cy="10.5" r=".9" fill="currentColor"/></svg><span class="tbadge" id="petBadge"></span></button>
     <button data-tab="hot" aria-label="Горит"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.6 3.2 4.5 5.2 4.5 9.8a4.5 4.5 0 0 1-9 0c0-1.9.8-3.3 1.8-4.3.2 1.6 1 2.6 2 3 0-3.3-.4-5.9.7-8.5z"/></svg><span class="tbadge" id="hotBadge"></span></button>
     <button data-tab="hab" aria-label="Привычки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></button>
     <button data-tab="stat" aria-label="Статистика"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button>
@@ -669,7 +703,9 @@ html.dark-over,html.dark-over body{background:#121212}
     <div class="cell" id="ntSt" style="font-size:13px;color:var(--mut);min-height:44px;line-height:1.35;padding-top:8px;padding-bottom:8px">Работает, когда Делагочи установлен на экран «Домой» и подключена синхронизация</div>
   </div>
   <div class="group" id="demoWrap"><button class="cell red" id="demoBtn">Убрать примеры</button></div>
-  <div class="group"><button class="cell red" id="resetBtn">Сбросить всё</button></div>
+  <div class="ghead">Начать заново</div>
+  <div class="group"><button class="cell red" id="resetBtn">Сбросить всё и начать с чистого листа</button></div>
+  <div class="ghead" style="text-transform:none;letter-spacing:0">Удалит все дела, отметки, привычки и дни рождения. Тема, имя и синхронизация останутся.</div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
 </div>
 
@@ -914,7 +950,8 @@ function streak(){
 function render(dir){renderHello();
   if(tab==='cal'){renderCal(dir);renderList(dir)}
   else{$('month').textContent=MONTHS[view.m];$('year').textContent=view.y;
-    if(tab==='stat')renderStats(dir);else if(tab==='hot')renderHotPage(dir);else renderHabPage(dir)}
+    if(tab==='stat')renderStats(dir);else if(tab==='hot')renderHotPage(dir);else if(tab==='pet')renderPet(dir);else renderHabPage(dir)}
+  if(window.petBadge)petBadge();
   $('hotBadge').textContent=(()=>{const G=hotData();return G.over.length+G.today.length||''})();
 }
 const slideIn=(el,dir)=>{if(dir){el.classList.remove('anim-l','anim-r');void el.offsetWidth;el.classList.add(dir>0?'anim-l':'anim-r')}};
@@ -979,12 +1016,12 @@ $('pHab').addEventListener('click',e=>{
 });
 
 /* вкладки */
-const TABS=['cal','hot','hab','stat'];
+const TABS=['cal','pet','hot','hab','stat'];
 function goTab(name){
   if(name===tab)return;const dir=TABS.indexOf(name)>TABS.indexOf(tab)?1:-1;tab=name;
   $('tabs').querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x.dataset.tab===tab));
-  $('cal').hidden=$('pCal').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';
-  $('seg').hidden=tab==='hot'||tab==='hab';
+  $('cal').hidden=$('pCal').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';$('pPet').hidden=tab!=='pet';
+  $('seg').hidden=tab==='hot'||tab==='hab'||tab==='pet';
   scrollTo(0,0);render(dir);
 }
 
@@ -1679,6 +1716,100 @@ $('ntOn').addEventListener('change',async e=>{
   d.querySelector('button').onclick=()=>{d.remove();try{localStorage.setItem('planerdemo.bartip','1')}catch(e){}};
   document.body.appendChild(d);
 })();
+
+/* ===== Бип: питомец-тамагочи. Ест выполненные дела, иногда пишет сам (не чаще раза в 3 часа и 3 раз в день) ===== */
+const BIP={
+ n:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkwwkkkkwwkkk.','.kkkwwkkkkwwkkk.','.kkkkkkkkkkkkkk.','.kkpkkkkkkkkpkk.','.kkkkkkwwkkkkkk.','..kkkkkkkkkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...'],
+ h:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkwkkkkwkkkk.','.kkkwkwkkwkwkkk.','.kkkkkkkkkkkkkk.','.kkpkkwwwwkkpkk.','.kkkkkkwwkkkkkk.','..kkkkkkkkkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...'],
+ sad:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkwwkkkkwwkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkwwkkkkkk.','..kkkkwkkwkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...'],
+ s:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkwwkkkkwwkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','..kkkkkkkkkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...']
+};
+const bipSvg=(m,night)=>{const ink=night?'#C9E265':'#2E3A12',bg=night?'#4D5726':'#C9E265';let r='';BIP[m].forEach((row,y)=>[...row].forEach((c,x)=>{if(c!=='.')r+=`<rect x="${x}" y="${y}" width="1.03" height="1.03" fill="${c==='w'?bg:ink}"/>`}));return `<svg viewBox="0 0 16 14" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`};
+const isNight=()=>{const h=new Date().getHours();return h>=23||h<7};
+function bipStats(){
+  const today=iso(new Date()),it=dayItems(null,today);
+  const ws=it.filter(t=>t.cal!=='p'),food=ws.length?ws.filter(t=>t.done).length/ws.length:.6;
+  let fun=0;for(let i=0;i<7;i++)fun+=dayItems('p',addDay(today,-i)).filter(t=>t.done).length;
+  const joy=Math.min(1,.2+fun*.2);
+  const nrg=S.habits.length?S.habits.filter(h=>S.hab[today+'|'+h.id]).length/S.habits.length:.7;
+  const st=streak(),stage=st>=21?'взрослый':st>=7?'подросток':st>=3?'малыш':'кроха',next=st>=21?0:st>=7?21-st:st>=3?7-st:3-st;
+  const mood=isNight()?'s':(food<.3&&ws.length)||joy<.35?'sad':food>=.99&&ws.length?'h':'n';
+  return {food,joy,nrg,st,stage,next,mood};
+}
+/* переписка хранится только на этом устройстве */
+let CH={msgs:[],last:{},seen:0};
+try{CH=Object.assign(CH,JSON.parse(localStorage.getItem('planerdemo.chat'))||{})}catch(e){}
+const saveCH=()=>{if(CH.msgs.length>60)CH.msgs=CH.msgs.slice(-60);try{localStorage.setItem('planerdemo.chat',JSON.stringify(CH))}catch(e){}};
+const hm=()=>{const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+function bipSay(text,acts,from){CH.msgs.push({id:newId(),from:from||'bip',text,acts:acts||[],t:Date.now()});saveCH()}
+const nameP=()=>S.name||'Ромашка';
+const firstTodo=()=>{const today=iso(new Date());const it=dayItems(null,today).filter(t=>!t.done).sort(cmp);return it.find(t=>t.time)||it[0]};
+function overdueOne(){const today=iso(new Date());for(let i=-30;i<0;i++){const k=addDay(today,i);const t=dayItems(null,k).find(t=>!t.done&&!t.vid&&t.type!=='ls'&&t.type!=='mt');if(t)return t}return null}
+/* правила: что Бип может сказать сам. Возвращает одно сообщение или ничего */
+function bipThink(){
+  const now=Date.now(),today=iso(new Date()),h=new Date().getHours(),L=CH.last;
+  const todayCnt=CH.msgs.filter(m=>m.from==='bip'&&m.auto&&iso(new Date(m.t))===today).length;
+  if(isNight()||todayCnt>=3)return;
+  const say=(key,text,acts)=>{L[key]=now;CH.msgs.push({id:newId(),from:'bip',text,acts:acts||[],t:now,auto:true});L._last=now;saveCH();return true};
+  if(h>=6&&!L['m:'+today]){
+    const it=dayItems(null,today).filter(t=>!t.done),f=firstTodo();
+    return say('m:'+today,it.length?`Доброе утро, ${nameP()}! Сегодня ${it.length} ${plural(it.length,['дело','дела','дел'])}. Я бы начал с «${f.title}»${f.time?' в '+f.time:''} ✦`:`Доброе утро, ${nameP()}! Сегодня свободно — хороший день, чтобы сделать что-то для себя ✦`);
+  }
+  if(now-(L._last||0)<3*36e5)return;
+  const o=overdueOne();
+  if(o&&!L['o:'+today])return say('o:'+today,`«${o.title}» висит с ${dateTxt(o.date)}. Перенесём на сегодня?`,[{l:'Перенести на сегодня',a:'move',v:o.id},{l:'Не сейчас',a:'ok',g:1}]);
+  for(let i=1;i<=3;i++){const k=addDay(today,i);for(const b of bdayOn(k)){const key='b:'+b.id+':'+k.slice(0,4);if(!L[key])return say(key,`Через ${i} ${plural(i,['день','дня','дней'])} день рождения у ${b.n} 🎂 Добавить дело «Поздравить»?`,[{l:'Добавить',a:'add',v:{cal:'w',title:'Поздравить: '+b.n,date:addDay(k,-1),type:'dl'}},{l:'Не надо',a:'ok',g:1}])}}
+  let fun=0;for(let i=0;i<6;i++)fun+=dayItems('p',addDay(today,-i)).filter(t=>t.done).length;
+  const wk=today.slice(0,8)+Math.floor(new Date().getDate()/7);
+  if(!fun&&!L['j:'+wk]){const sat=addDay(today,(6-new Date().getDay()+7)%7||7);return say('j:'+wk,'Ты давно ничего не делал для себя. Запланируем отдых на выходные? 💜',[{l:'Запланировать',a:'add',v:{cal:'p',title:'Отдых',date:sat,type:'fun'}},{l:'Позже',a:'ok',g:1}])}
+  if(h>=19&&S.habits.length&&!L['h:'+today]){const left=S.habits.filter(x=>!S.hab[today+'|'+x.id]);if(left.length)return say('h:'+today,`Ещё не отмечено: ${left.map(x=>(x.e||'✦')+' '+x.n).join(', ')}. Сделал?`,left.slice(0,3).map(x=>({l:'Отметить '+(x.e||x.n),a:'hab',v:x.id})))}
+  const st=streak();if([3,7,14,21,30,50,100].includes(st)&&!L['s:'+st])return say('s:'+st,`${st} ${plural(st,['день','дня','дней'])} подряд! ${st===3?'Я вылупился в малыша':st===7?'Я вырос в подростка':st===21?'Я стал взрослым':'Ты легенда'} 🎉`);
+  if(h>=18&&!L['t:'+today]){const n=dayItems(null,addDay(today,1)).length;if(n>=5)return say('t:'+today,`Завтра ${n} ${plural(n,['дело','дела','дел'])} — плотно. Может, что-то начать сегодня или перенести?`,[{l:'Открыть завтра',a:'day',v:addDay(today,1)},{l:'Ок',a:'ok',g:1}])}
+}
+/* ответы на быстрые вопросы */
+const QUICK=[['today','Что сегодня?'],['hot','Что горит?'],['first','С чего начать?'],['how','Как ты?']];
+function bipAnswer(q){
+  const today=iso(new Date()),it=dayItems(null,today).filter(t=>!t.done).sort(cmp);
+  bipSay(QUICK.find(x=>x[0]===q)[1],[],'me');
+  if(q==='today')bipSay(it.length?`Сегодня ${it.length} ${plural(it.length,['дело','дела','дел'])}: ${it.slice(0,5).map(t=>(t.time?t.time+' ':'')+t.title).join(', ')}${it.length>5?` и ещё ${it.length-5}`:''}.`:'На сегодня всё сделано или дел нет. Можно отдыхать ✦');
+  else if(q==='hot'){const G=hotData(),n=G.over.length+G.today.length+G.tom.length;bipSay(n?`Просрочено ${G.over.length}, сегодня горит ${G.today.length}, завтра ${G.tom.length}.`:'Ничего не горит, всё под контролем 😌',n?[{l:'Открыть «Горит»',a:'tab',v:'hot'}]:[])}
+  else if(q==='first'){const o=overdueOne(),f=firstTodo();bipSay(o?`Сначала разберись с хвостом: «${o.title}» с ${dateTxt(o.date)}. Потом станет легче.`:f?`Начни с «${f.title}»${f.time?' — оно в '+f.time:''}. Маленький шаг — и я уже сытый 🍙`:'Сегодня можно ничего не начинать — всё готово ✦')}
+  else{const b=bipStats(),p=x=>Math.round(x*100);bipSay(`Сытость ${p(b.food)}%, счастье ${p(b.joy)}%, энергия ${p(b.nrg)}%. ${b.joy<.4?'Мне не хватает чего-то личного 💜':b.food<.4?'Немного голодный — закрой пару дел 🍙':'Мне хорошо с тобой ✦'}`)}
+  renderPet();
+}
+function renderPet(dir){
+  const b=bipStats(),night=isNight(),p=x=>Math.round(x*100);
+  const P=$('pPet');
+  P.innerHTML=`<div class="petcard">
+    <div class="pet-lcd${night?' night':''}" id="petLcd"><div class="pet-say" id="petSay"></div>${bipSvg(b.mood,night)}</div>
+    <div class="pet-head"><b>Бип</b><small>${b.stage} · 🔥 ${b.st}${b.next?` · до роста ${b.next} ${plural(b.next,['день','дня','дней'])}`:''}</small></div>
+    ${[['🍙 Сытость',b.food,'#D4FF3A'],['💜 Счастье',b.joy,'#FF5DA8'],['⚡ Энергия',b.nrg,'#8B5CFF']].map(([n,v,c])=>`<div class="need"><span>${n}</span><span class="tr"><i style="width:${p(v)}%;background:${c}"></i></span><em>${p(v)}%</em></div>`).join('')}
+  </div>
+  <div class="chat">${CH.msgs.length?CH.msgs.slice(-20).map(m=>`<div class="bubble ${m.from}">${esc(m.text)}${m.acts&&m.acts.length&&!m.used?`<div class="bacts">${m.acts.map((a,i)=>`<button class="${a.g?'ghost':''}" data-m="${m.id}" data-i="${i}">${esc(a.l)}</button>`).join('')}</div>`:''}<time>${new Date(m.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</time></div>`).join(''):'<div class="chat-empty">Бип иногда будет писать сюда сам. А пока можно спросить его 👇</div>'}</div>
+  <div class="quick">${QUICK.map(([k,l])=>`<button data-q="${k}">${l}</button>`).join('')}</div>`;
+  CH.seen=CH.msgs.length;saveCH();petBadge();slideIn(P,dir);
+}
+function petBadge(){try{const n=CH.msgs.length-(CH.seen||0);$('petBadge').textContent=tab==='pet'?'':(n>0?n:'')}catch(e){}}
+window.petBadge=petBadge;
+const PETS=['Я тут!','Ням? 🍙','Ещё одно дело — и я счастлив','Мур-бип ✦','Щекотно!','Ты справишься 💪'];
+$('pPet').addEventListener('click',e=>{
+  const l=e.target.closest('#petLcd');
+  if(l){l.classList.add('jump');setTimeout(()=>l.classList.remove('jump'),300);const s=$('petSay');s.textContent=isNight()?'Zz… сплю':PETS[Math.random()*PETS.length|0];s.classList.add('on');clearTimeout(s._t);s._t=setTimeout(()=>s.classList.remove('on'),1600);haptic(8);return}
+  const q=e.target.closest('[data-q]');if(q){bipAnswer(q.dataset.q);scrollTo(0,document.body.scrollHeight);return}
+  const a=e.target.closest('[data-m]');if(!a)return;
+  const m=CH.msgs.find(x=>x.id===a.dataset.m),act=m.acts[+a.dataset.i];m.used=true;saveCH();
+  if(act.a==='move'){const t=S.tasks.find(x=>x.id===act.v);if(t){t.date=iso(new Date());t.u=Date.now();save();bipSay('Готово, перенёс на сегодня 👍');haptic(10)}}
+  else if(act.a==='hab'){setHab(iso(new Date())+'|'+act.v,true);save();bipSay('Отметил! Энергии прибавилось ⚡');haptic(10)}
+  else if(act.a==='add'){const v=act.v;goTab('cal');if(S.cal!==v.cal)setCal(v.cal);sel=v.date;const d=fromIso(v.date);view={y:d.getFullYear(),m:d.getMonth()};render();
+    setTimeout(()=>{openTask();$('fTitle').value=v.title;$('fDate').value=v.date;qman={date:true};fType=v.type;qman.type=true;renderTypes()},120);return}
+  else if(act.a==='day'){goTab('cal');sel=act.v;const d=fromIso(sel);view={y:d.getFullYear(),m:d.getMonth()};render();return}
+  else if(act.a==='tab'){goTab(act.v);return}
+  render();
+});
+/* Бип «думает» при запуске и когда возвращаешься в приложение */
+function bipTick(){const before=CH.msgs.length;bipThink();if(CH.msgs.length!==before){petBadge();if(tab==='pet')renderPet()}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(bipTick,800)});
+setTimeout(bipTick,1500);
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

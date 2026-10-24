@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Планер">
+<meta name="apple-mobile-web-app-title" content="Делагочи">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#ffffff" id="themeColor">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<title>Планер</title>
+<title>Делагочи</title>
 <style>
 :root{
   --bg:#ffffff;--fg:#0a0a0a;--mut:#8e8e93;--faint:#c7c7cc;--line:rgba(0,0,0,.08);
@@ -583,7 +583,7 @@ html.dark-over,html.dark-over body{background:#121212}
       <text x="50" y="60" text-anchor="middle" font-size="26">🛠️</text>
     </svg>
     <h1 id="techT">Идут технические работы</h1>
-    <p id="techText">Планер обновляется. Загляни через пару минут — твои задачи в безопасности.</p>
+    <p id="techText">Делагочи обновляется. Загляни через пару минут — твои задачи в безопасности.</p>
     <button class="or-btn" id="techBtn">Проверить снова<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></span></button>
   </div>
 </div>
@@ -667,7 +667,7 @@ html.dark-over,html.dark-over body{background:#121212}
     <label class="cell"><span>Присылать уведомления</span><input type="checkbox" switch id="ntOn"></label>
     <label class="cell"><span>Напоминать за</span><select class="pick" id="ntLead"><option value="0">В момент</option><option value="5">5 минут</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="60">1 час</option></select></label>
     <label class="cell"><span>Утренняя сводка</span><select class="pick" id="ntM"><option value="">Выкл</option><option>07:00</option><option>08:00</option><option>09:00</option><option>10:00</option></select></label>
-    <div class="cell" id="ntSt" style="font-size:13px;color:var(--mut);min-height:44px;line-height:1.35;padding-top:8px;padding-bottom:8px">Работает, когда планер установлен на экран «Домой» и подключена синхронизация</div>
+    <div class="cell" id="ntSt" style="font-size:13px;color:var(--mut);min-height:44px;line-height:1.35;padding-top:8px;padding-bottom:8px">Работает, когда Делагочи установлен на экран «Домой» и подключена синхронизация</div>
   </div>
   <div class="group" id="demoWrap"><button class="cell red" id="demoBtn">Убрать примеры</button></div>
   <div class="group"><button class="cell red" id="resetBtn">Сбросить всё</button></div>
@@ -1195,9 +1195,9 @@ $('fDel').onclick=()=>{if(!editing)return;if(!confirm('Удалить задач
 $('menuBtn').onclick=()=>{ntFill();$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
 $('themeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.theme=b.dataset.t;save();applyTheme();render()}});
 $('exportBtn').onclick=async()=>{
-  const name=`Копия планера ${iso(new Date())}.json`,data=JSON.stringify(S,null,1);
+  const name=`Копия Делагочи ${iso(new Date())}.json`,data=JSON.stringify(S,null,1);
   const file=new File([data],name,{type:'application/json;charset=utf-8'});
-  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Копия планера'});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Копия Делагочи'});return}}catch(e){if(e&&e.name==='AbortError')return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/octet-stream'}));a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 };
@@ -1207,7 +1207,7 @@ $('importFile').onchange=async e=>{
   try{const d=JSON.parse((await f.text()).replace(/^\ufeff/,''));if(!Array.isArray(d.tasks))throw 0;
     if(!confirm(`Заменить текущие задачи задачами из файла (${d.tasks.length} шт.)?`))return;
     S=Object.assign({theme:S.theme,cal:'w',days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
-  catch(_){alert('Это не файл копии планера')}
+  catch(_){alert('Это не файл копии Делагочи')}
   e.target.value='';
 };
 $('demoBtn').onclick=()=>{if(!confirm('Убрать все примеры задач? Твои задачи останутся.'))return;S.tasks.filter(t=>t.demo).forEach(t=>S.gone[t.id]=Date.now());S.tasks=S.tasks.filter(t=>!t.demo);if(S.daysDemo){for(const c of['w','s'])for(const k in S.days[c])setMap('days',c,k,null);S.daysDemo=false}save();hide();render()};
@@ -1498,7 +1498,7 @@ function pHero(x,title,sub){
   return T+560+100;
 }
 function pFoot(x,n,tot){
-  x.fillStyle='#9A9A9A';x.font=PF(600,30);x.fillText(`${S.name||'Руслан'} · планер · ${dateTxt(iso(new Date()))}`,PM,PH-70);
+  x.fillStyle='#9A9A9A';x.font=PF(600,30);x.fillText(`${S.name||'Руслан'} · Делагочи · ${dateTxt(iso(new Date()))}`,PM,PH-70);
   x.textAlign='right';x.fillText(`${n} / ${tot}`,PW-PM,PH-70);x.textAlign='left';
 }
 function pdfList(items,title){
@@ -1645,9 +1645,9 @@ async function subFile(method,content){
 async function pushOn(){
   if(!token())return ntSt('Сначала вставь ключ GitHub в «Синхронизации» — через него телефон регистрируется для уведомлений');
   if(!('serviceWorker' in navigator)||!('PushManager' in window)||!window.Notification)
-    return ntSt(/iPhone|iPad/.test(navigator.userAgent)&&!standalone()?'Открой планер с экрана «Домой» (Safari → Поделиться → На экран «Домой») и включи здесь':'Этот браузер не умеет присылать уведомления');
+    return ntSt(/iPhone|iPad/.test(navigator.userAgent)&&!standalone()?'Открой Делагочи с экрана «Домой» (Safari → Поделиться → На экран «Домой») и включи здесь':'Этот браузер не умеет присылать уведомления');
   const perm=await Notification.requestPermission();
-  if(perm!=='granted')return ntSt('Уведомления запрещены. Разреши их: Настройки айфона → Планер → Уведомления');
+  if(perm!=='granted')return ntSt('Уведомления запрещены. Разреши их: Настройки айфона → Делагочи → Уведомления');
   ntSt('Подключаю…');
   const reg=await navigator.serviceWorker.ready;
   const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uBytes(VAPID)}));
@@ -1677,7 +1677,7 @@ $('ntOn').addEventListener('change',async e=>{
   const safe=!!token();
   const d=document.createElement('div');
   d.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:85;max-width:460px;margin:0 auto;background:#121212;color:#fff;border-radius:20px;padding:14px 16px;font:500 14px/1.45 -apple-system,system-ui,sans-serif;box-shadow:0 12px 32px rgba(0,0,0,.35)';
-  d.innerHTML=`<b style="display:block;font-size:15px;margin-bottom:4px">Значок установлен в старом режиме</b>Чтобы фон заходил под часы, удали значок планера и добавь заново: Safari → «Поделиться» → «На экран „Домой“».${safe?' Задачи сохранены в синхронизации и вернутся сами.':' Сначала сохрани копию: «⋯» → «Сохранить в файл».'}<div style="text-align:right;margin-top:10px"><button style="background:#D4FF3A;color:#121212;border-radius:999px;padding:8px 14px;font-weight:800">Понятно</button></div>`;
+  d.innerHTML=`<b style="display:block;font-size:15px;margin-bottom:4px">Значок установлен в старом режиме</b>Чтобы фон заходил под часы, удали значок Делагочи и добавь заново: Safari → «Поделиться» → «На экран „Домой“».${safe?' Задачи сохранены в синхронизации и вернутся сами.':' Сначала сохрани копию: «⋯» → «Сохранить в файл».'}<div style="text-align:right;margin-top:10px"><button style="background:#D4FF3A;color:#121212;border-radius:999px;padding:8px 14px;font-weight:800">Понятно</button></div>`;
   d.querySelector('button').onclick=()=>{d.remove();try{localStorage.setItem('planer.bartip','1')}catch(e){}};
   document.body.appendChild(d);
 })();

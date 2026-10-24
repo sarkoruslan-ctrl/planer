@@ -1,4 +1,4 @@
-const V='planer-v18',FILES=['./','index.html','manifest.json','icon.svg','icon-180.png','icon-192.png','icon-512.png'];
+const V='planer-v19',FILES=['./','index.html','manifest.json','icon.svg','icon-180.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))));self.clients.claim()});
 self.addEventListener('fetch',e=>{
@@ -13,8 +13,8 @@ self.addEventListener('fetch',e=>{
 });
 /* пуш-уведомления от «будильника» на GitHub */
 self.addEventListener('push',e=>{
-  let d={};try{d=e.data.json()}catch(_){d={title:'Планер',body:e.data?e.data.text():''}}
-  e.waitUntil(self.registration.showNotification(d.title||'Планер',{body:d.body||'',tag:d.tag,icon:'icon-192.png',badge:'icon-192.png',data:{url:d.url||'./'}}));
+  let d={};try{d=e.data.json()}catch(_){d={title:'Делагочи',body:e.data?e.data.text():''}}
+  e.waitUntil(self.registration.showNotification(d.title||'Делагочи',{body:d.body||'',tag:d.tag,icon:'icon-192.png',badge:'icon-192.png',data:{url:d.url||'./'}}));
 });
 self.addEventListener('notificationclick',e=>{
   e.notification.close();

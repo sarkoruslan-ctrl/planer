@@ -689,6 +689,34 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
 .letter .or-btn{background:#D4FF3A;color:#121212}
 .letter .or-btn span{background:#121212;color:#D4FF3A}
 
+/* «Отменить» */
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 100px);transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:70;
+  display:flex;align-items:center;gap:14px;background:#121212;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;font-size:14px;font-weight:700;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.34,1.3,.64,1),opacity .25s;white-space:nowrap}
+.toast.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast button{background:#D4FF3A;color:#121212;border-radius:999px;padding:8px 14px;font-weight:800}
+@media (min-width:920px){.toast{bottom:28px}}
+/* поиск */
+#sres:empty{display:none}
+.sr{display:block;width:100%;text-align:left;padding:11px 16px;position:relative}
+.sr+.sr::before{content:'';position:absolute;top:0;left:16px;right:0;height:.5px;background:var(--sep)}
+.sr b{display:block;font-size:16px;font-weight:600}
+.sr small{font-size:13px;color:var(--mut)}
+.sr mark{background:#D4FF3A;color:#121212;border-radius:3px;padding:0 1px}
+/* крупный текст */
+html.big .app,html.big .sheet{zoom:1.14}
+/* подсказки по приложению */
+.mtip{position:fixed;z-index:72;max-width:290px;background:#121212;color:#fff;border-radius:18px;padding:12px 14px 10px;font-size:14px;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.28);opacity:0;transform:translateY(6px) scale(.97);transition:opacity .3s,transform .4s cubic-bezier(.34,1.3,.64,1);pointer-events:none}
+.mtip.on{opacity:1;transform:none;pointer-events:auto}
+.mtip-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:rgba(255,255,255,.5)}
+.mtip-row button{font:inherit;font-size:13px;font-weight:800;color:#121212;background:#D4FF3A;border-radius:999px;padding:6px 12px}
+.mtip-row .skip{background:none;color:rgba(255,255,255,.55);padding:6px 4px;font-weight:600}
+.mring{position:fixed;z-index:71;border-radius:16px;pointer-events:none;box-shadow:0 0 0 3px #D4FF3A;transition:all .35s cubic-bezier(.32,.72,0,1)}
+
+/* узкие экраны: шапка не вылезает за край */
+@media (max-width:440px){#prev,#next{display:none}.month{font-size:clamp(32px,10.5vw,46px)}.icons{gap:2px}}
+html,body{overflow-x:hidden}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -704,6 +732,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
     <div class="icons">
       <button class="ib" id="prev" aria-label="Предыдущий месяц"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button class="ib" id="next" aria-label="Следующий месяц"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="ib" id="searchBtn" aria-label="Поиск"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
       <button class="ib av" id="avBtn" aria-label="Профиль месяца"></button>
       <button class="ib" id="menuBtn" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
     </div>
@@ -796,6 +825,9 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   <div class="lt-in"><div class="lt-env" id="ltEnv">💌</div><div class="lt-card" id="ltCard"></div><button class="or-btn" id="ltClose">Закрыть<span>✦</span></button></div>
 </div>
 
+<div class="mring" id="mring" hidden></div>
+<div class="mtip" id="mtip" role="dialog" aria-live="polite"><div id="mtipText"></div><div class="mtip-row"><button class="skip" id="mtipSkip">Хватит подсказок</button><span id="mtipN"></span><button id="mtipNext">Дальше</button></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span></span><button id="undoBtn">Отменить</button></div>
 <div class="fade" aria-hidden="true"></div>
 <nav class="tabs" id="tabs">
   <div class="tb2">
@@ -852,6 +884,8 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   </div>
   <div class="ghead">Копия задач</div>
   <div class="group">
+    <label class="cell"><span>Крупный текст</span><input type="checkbox" switch id="bigTxt"></label>
+    <button class="cell" id="tourBtn"><span>Показать подсказки по приложению</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
     <button class="cell" id="exportBtn"><span>Сохранить в файл</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
     <button class="cell" id="importBtn"><span>Загрузить из файла</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
@@ -1033,6 +1067,22 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   <div class="err" id="capErr" style="margin:-6px 16px 10px"></div>
 </div>
 
+<div class="sheet ios" id="scopeSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><span></span><b id="scopeTitle">Повторяющееся дело</b><button data-close>Отмена</button></div>
+  <div class="group">
+    <button class="cell" data-scope="one" style="justify-content:center;font-weight:700">Только этот раз</button>
+    <button class="cell" data-scope="all" style="justify-content:center;font-weight:700">Все повторы</button>
+  </div>
+</div>
+
+<div class="sheet ios" id="searchSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><span></span><b>Поиск</b><button class="done" data-close>Готово</button></div>
+  <div class="group"><div class="cell"><input class="cin" id="sq" type="search" placeholder="Дела, мысли, посты…" autocomplete="off" enterkeyhint="search"></div></div>
+  <div class="group" id="sres"></div>
+</div>
+
 <div class="sheet ios" id="emojiSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <div class="nav"><button id="eClear">Убрать</button><b id="eTitle">Смайлик</b><button class="done" data-close>Готово</button></div>
@@ -1058,7 +1108,7 @@ const fromIso=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)
 const typeOf=(cal,id)=>{const t=TYPES[cal].find(x=>x.id===id)||TYPES[cal][0];return document.documentElement.dataset.theme==='dark'&&t.cd?{...t,c:t.cd,on:t.ond||t.on}:t};
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem('planer.dirty','1')}catch(e){}queueSync()}
+function save(){DC={};try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem('planer.dirty','1')}catch(e){}queueSync()}
 function seed(){
   const t=new Date(),d=n=>iso(new Date(t.getFullYear(),t.getMonth(),t.getDate()+n));
   const mk=(cal,off,time,title,type)=>({id:Math.random().toString(36).slice(2),cal,date:d(off),time,title,type,done:false,demo:true});
@@ -1112,8 +1162,10 @@ function occurs(t,k){
   }
   return false;
 }
+let DC={};
 function dayItems(cal,k){
-  const out=[];
+  const ck=(cal||'*')+k;if(DC[ck])return DC[ck];
+  const out=DC[ck]=[];
   for(const t of S.tasks){
     if(cal&&t.cal!==cal)continue;
     if(!t.rep){if(t.date===k)out.push(t);continue}
@@ -1388,7 +1440,7 @@ $('list').addEventListener('click',e=>{
   const it=findItem(row.dataset.id);if(!it)return;
   if(e.target.closest('[data-chk]')){const was=it.done;toggleItem(it);afterToggle({done:was},e.clientX,e.clientY)}
   else if(e.target.closest('[data-stage]')){const t=it.series||it,ks=Object.keys(STAGE);t.stage=ks[(ks.indexOf(t.stage||'idea')+1)%ks.length];t.u=Date.now();save();haptic(8);renderList()}
-  else if(e.target.closest('[data-edit]'))openTask(it.series||it);
+  else if(e.target.closest('[data-edit]'))openTask(it.series||it,it.vid?it.date:null);
 });
 /* свайп по задаче: вправо — готово, влево — на завтра */
 let sw=null;
@@ -1405,11 +1457,11 @@ function endSw(){
   const w=row.parentElement;w.classList.remove('arm');delete w.dataset.dir;
   if(!on)return;noClick=true;setTimeout(()=>noClick=false,60);
   const it=findItem(row.dataset.id);if(!it)return;
-  if(dx>80){const was=it.done,rc=row.getBoundingClientRect();toggleItem(it);afterToggle({done:was},rc.left+30,rc.top+rc.height/2)}
-  else if(dx<-80){moveItem(it);save();haptic(10);render()}
+  if(dx>80){snap();const was=it.done,rc=row.getBoundingClientRect();toggleItem(it);afterToggle({done:was},rc.left+30,rc.top+rc.height/2);undoToast(was?'Снова в планах':'Готово ✓')}
+  else if(dx<-80){snap();moveItem(it);save();haptic(10);render();undoToast('Перенесено на завтра')}
 }
 $('list').addEventListener('pointerup',endSw);$('list').addEventListener('pointercancel',endSw);
-$('mvBtn').onclick=()=>{dayItems(S.cal,sel).filter(t=>!t.done).forEach(moveItem);save();haptic(12);render()};
+$('mvBtn').onclick=()=>{snap();const L=dayItems(S.cal,sel).filter(t=>!t.done);L.forEach(moveItem);save();haptic(12);render();undoToast(`Перенесено на завтра: ${L.length}`)};
 
 /* конфетти в цветах планера: маленький салют у галочки, большой — когда закрыты все дела дня */
 function confetti(ox,oy,n){
@@ -1448,10 +1500,11 @@ function renderTypes(){
   $('fTypes').innerHTML=TYPES[S.cal].map(x=>typeOf(S.cal,x.id)).map(t=>`<button class="chip${t.id===fType?' on':''}" data-t="${t.id}" style="--c:${t.c};--on:${t.on}"><i></i>${t.n}</button>`).join('');
 }
 $('fTypes').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b){fType=b.dataset.t;qman.type=true;renderTypes()}});
-function openTask(t){
-  editing=t||null;
+let editInst=null;
+function openTask(t,inst){
+  editing=t||null;editInst=t&&t.rep?inst||null:null;
   $('shTitle').textContent=t?'Задача':{w:'Рабочая задача',s:'Учебная задача',p:'Личное дело'}[S.cal];
-  $('fTitle').value=t?t.title:'';$('fDate').value=t?t.date:sel;$('fTime').value=t?t.time:'';$('fEnd').value=(t&&t.end)||'';
+  $('fTitle').value=t?t.title:'';$('fDate').value=t?(editInst||t.date):sel;$('fTime').value=t?t.time:'';$('fEnd').value=(t&&t.end)||'';
   fType=t?t.type:TYPES[S.cal][0].id;$('fErr').textContent='';fEmo=(t&&t.emoji)||'';setEmoBtn($('fEmoji'),fEmo);
   $('fRep').value=t&&t.rep?t.rep.k:'';$('fRem').value=(t&&t.rem)||'';$('fRemAt').value=(t&&t.remAt)||'';remRow();$('fFmt').value=(t&&t.fmt)||'';$('fPlat').value=(t&&t.plat)||'';$('fStage').value=(t&&t.stage)||'idea';
   tplEditing=false;renderTpls(!t);
@@ -1507,11 +1560,18 @@ $('fSave').onclick=()=>{
   const date=$('fDate').value||sel,time=$('fTime').value,end=time&&$('fEnd').value?$('fEnd').value:null;
   if(end&&end<=time){$('fErr').textContent='Конец должен быть позже начала';return}
   const rv=$('fRem').value,extra={rem:rv||null,remAt:rv==='at'?($('fRemAt').value||null):null,end,rep:$('fRep').value?{k:$('fRep').value}:null,fmt:S.cal==='s'?($('fFmt').value||null):null,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null};
-  if(editing)Object.assign(editing,{title,date,time,type:fType,emoji:fEmo,...extra,demo:false,u:Date.now()});
-  else S.tasks.push({id:newId(),cal:S.cal,date,time,title,type:fType,emoji:fEmo,...extra,done:false,u:Date.now()});
+  const F={title,date,time,type:fType,emoji:fEmo,...extra};
+  if(editing&&editing.rep&&editInst)return askScope('Изменить',sc=>{
+    if(sc==='one'){setMap('rdone',editing.cal,editing.id+'@'+editInst,'skip');S.tasks.push({...F,id:newId(),cal:editing.cal,rep:null,done:false,u:Date.now()})}
+    else Object.assign(editing,{...F,date:editing.date,demo:false,u:Date.now()});
+    save();sel=date;const d=fromIso(date);view={y:d.getFullYear(),m:d.getMonth()};hide();render();
+  });
+  if(editing)Object.assign(editing,{...F,demo:false,u:Date.now()});
+  else S.tasks.push({id:newId(),cal:S.cal,...F,done:false,u:Date.now()});
   save();sel=date;const d=fromIso(date);view={y:d.getFullYear(),m:d.getMonth()};hide();render();
 };
-$('fDel').onclick=()=>{if(!editing)return;if(!confirm('Удалить задачу «'+editing.title+'»?'))return;S.gone[editing.id]=Date.now();S.tasks=S.tasks.filter(x=>x!==editing);save();hide();render()};
+$('fDel').onclick=()=>{if(!editing)return;if(editing.rep&&editInst)return askScope('Удалить',sc=>{snap();if(sc==='one')setMap('rdone',editing.cal,editing.id+'@'+editInst,'skip');else{S.gone[editing.id]=Date.now();S.tasks=S.tasks.filter(x=>x!==editing)}save();hide();render();undoToast(sc==='one'?'Удалено только на этот день':'Повтор удалён')});
+  snap();S.gone[editing.id]=Date.now();S.tasks=S.tasks.filter(x=>x!==editing);save();hide();render();undoToast('Задача удалена')};
 
 /* настройки */
 $('menuBtn').onclick=()=>{ntFill();$('nameIn').value=S.name||'';$('tokIn').value='';$('tokIn').placeholder=token()?'ключ сохранён':'вставь ключ';$('demoWrap').style.display=(S.tasks.some(t=>t.demo)||S.daysDemo)?'block':'none';show($('menuSheet'))};
@@ -1593,6 +1653,7 @@ function merge(r){
     S[key]=Object.values(M).filter(t=>!(S.gone[t.id]>=(t.u||0)));
   }
   if((rst.n||0)>(S.st.n||0)&&r.notify){S.notify=r.notify;S.st.n=rst.n}
+  DC={};
   const RP=r.prof||{};
   for(const k of Object.keys(RP)){const ls=S.st['P'+k]||0,rs=rst['P'+k]||0;if(rs>ls||!(k in S.prof)){S.prof[k]=RP[k];if(rs)S.st['P'+k]=rs}}
   const RM=r.months||{};
@@ -1711,7 +1772,7 @@ $('habEmo').onclick=()=>pickEmoji('Смайлик привычки',habE,v=>{hab
 $('habAdd').onclick=()=>{const n=$('habName').value.trim();if(!n){$('habName').focus();return}S.habits.push({id:newId(),n,e:habE,u:Date.now()});habE='';$('habName').value='';save();renderHabSheet();render()};
 $('habName').addEventListener('keydown',e=>{if(e.key==='Enter')$('habAdd').click()});
 $('habList').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;const h=S.habits.find(x=>x.id===b.dataset.del);
-  if(!confirm(`Удалить привычку «${h.n}»? Отметки по ней пропадут из статистики.`))return;S.gone[h.id]=Date.now();S.habits=S.habits.filter(x=>x!==h);save();renderHabSheet();render()});
+  snap();S.gone[h.id]=Date.now();setTimeout(()=>undoToast('Привычка удалена'),50);S.habits=S.habits.filter(x=>x!==h);save();renderHabSheet();render()});
 
 /* дни рождения */
 const md2txt=md=>{const [m,d]=md.split('-').map(Number);return `${d} ${MONTHS_G[m-1]}`};
@@ -1728,7 +1789,7 @@ $('bdAdd').onclick=()=>{
   $('bdName').value=$('bdOrg').value=$('bdDate').value='';$('bdErr').textContent='';save();renderBdSheet();render();haptic(10);
 };
 $('bdList').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;const x=S.bdays.find(y=>y.id===b.dataset.del);
-  if(!confirm(`Удалить день рождения «${x.n}»?`))return;S.gone[x.id]=Date.now();S.bdays=S.bdays.filter(y=>y!==x);save();renderBdSheet();render()});
+  snap();S.gone[x.id]=Date.now();setTimeout(()=>undoToast('День рождения удалён'),50);S.bdays=S.bdays.filter(y=>y!==x);save();renderBdSheet();render()});
 
 /* фокус-таймер 25 минут — считает по часам, поэтому не сбивается, если свернуть приложение */
 const FOCUS_MS=25*60*1000,RING=2*Math.PI*88;
@@ -1922,6 +1983,7 @@ $('shGo').onclick=makeShare;$('shGo2').onclick=makeShare;
 $('resetBtn').onclick=()=>{
   if(!confirm('Сбросить всё: дела, отметки дней, смайлики, привычки и дни рождения? Отменить будет нельзя. Если нужна копия — сначала «Сохранить в файл».'))return;
   if(!confirm('Точно сбросить? Если включена синхронизация, всё очистится и на других твоих устройствах.'))return;
+  snap();setTimeout(()=>undoToast('Всё сброшено'),300);
   const now=Date.now();
   for(const t of[...S.tasks,...S.bdays,...S.habits,...S.notes,...S.tpls,...S.posts])S.gone[t.id]=now;
   S.tasks=[];S.bdays=[];S.habits=[];S.notes=[];S.tpls=[];S.posts=[];for(const k in S.prof){S.prof[k]={u:now};S.st['P'+k]=now}
@@ -2182,7 +2244,7 @@ $('noteSave').onclick=()=>{
   if(noteEdit){noteEdit.t=t;noteEdit.u=Date.now()}else{const n={id:newId(),m:nm(),t,u:Date.now()};S.notes.push(n);lastNoteId=n.id}
   save();hide();renderNotes();haptic(10);
 };
-$('noteDel').onclick=()=>{if(!noteEdit||!confirm('Удалить мысль?'))return;S.gone[noteEdit.id]=Date.now();S.notes=S.notes.filter(x=>x!==noteEdit);save();hide();renderNotes()};
+$('noteDel').onclick=()=>{if(!noteEdit)return;snap();S.gone[noteEdit.id]=Date.now();S.notes=S.notes.filter(x=>x!==noteEdit);save();hide();renderNotes();undoToast('Мысль удалена')};
 
 /* шаблоны задач: сохранить один раз — потом заполнять одним нажатием */
 let tplEditing=false;
@@ -2196,7 +2258,7 @@ function renderTpls(show){
 $('tplEdit').onclick=()=>{tplEditing=!tplEditing;renderTpls(true)};
 $('tplList').addEventListener('click',e=>{
   const b=e.target.closest('[data-tp]');if(!b)return;const x=S.tpls.find(y=>y.id===b.dataset.tp);if(!x)return;
-  if(tplEditing){if(!confirm(`Удалить шаблон «${x.title}»?`))return;S.gone[x.id]=Date.now();S.tpls=S.tpls.filter(y=>y!==x);save();renderTpls(true);return}
+  if(tplEditing){snap();setTimeout(()=>undoToast('Шаблон удалён'),50);S.gone[x.id]=Date.now();S.tpls=S.tpls.filter(y=>y!==x);save();renderTpls(true);return}
   $('fTitle').value=x.title;$('fTime').value=x.time||'';$('fEnd').value=x.end||'';fType=x.type;fEmo=x.emoji||'';setEmoBtn($('fEmoji'),fEmo);
   $('fPlat').value=x.plat||'';$('fStage').value=x.stage||'idea';$('fFmt').value=x.fmt||'';$('fRep').value='';
   qman={time:true,end:true,type:true};renderTypes();$('qHint').textContent='✦ Из шаблона — выбери дату и нажми «Готово»';$('fErr').textContent='';haptic(8);
@@ -2428,7 +2490,7 @@ $('postImg').onclick=async()=>{const d=await pickImage(1080,1080,false);if(d){po
 $('postSave').onclick=()=>{const t=$('postText').value.trim();if(!t&&!postImgId){$('postErr').textContent='Напиши что-нибудь или прикрепи фото';return}
   if(postEdit)Object.assign(postEdit,{t,img:postImgId,u:postEdit.u});else S.posts.push({id:newId(),m:pfYm,t,img:postImgId,u:Date.now()});
   if(postEdit)postEdit.u2=Date.now();save();hide();renderProf();haptic(10)};
-$('postDel').onclick=()=>{if(!postEdit||!confirm('Удалить пост?'))return;S.gone[postEdit.id]=Date.now();S.posts=S.posts.filter(x=>x!==postEdit);save();hide();renderProf()};
+$('postDel').onclick=()=>{if(!postEdit)return;snap();S.gone[postEdit.id]=Date.now();S.posts=S.posts.filter(x=>x!==postEdit);save();hide();renderProf();undoToast('Пост удалён')};
 /* капсула времени */
 function capRow(){$('capDateRow').style.display=$('capWhen').value==='d'?'':'none'}
 $('capWhen').addEventListener('change',capRow);
@@ -2450,6 +2512,82 @@ const _bt=bipThink;bipThink=function(){const today=iso(new Date()),c=S.caps.find
   if(c&&!CH.last['cap:'+c.id]){CH.last['cap:'+c.id]=Date.now();CH.msgs.push({id:newId(),from:'bip',text:'💌 Тебе письмо из прошлого! Ты написал его '+dateTxt(c.created)+'. Открыть?',acts:[{l:'Открыть письмо',a:'cap',v:c.id}],t:Date.now(),auto:true});saveCH();return}
   return _bt()};
 renderAvBtn();
+
+/* ===== «Отменить»: снимок перед действием, восстановление со свежими метками, чтобы синхронизация не стёрла ===== */
+let UNDO=null,undoT=null;
+function snap(){UNDO=JSON.stringify(S)}
+function undoToast(text){const t=$('toast');t.querySelector('span').textContent=text;t.classList.add('on');clearTimeout(undoT);undoT=setTimeout(()=>{t.classList.remove('on');UNDO=null},5500)}
+$('undoBtn').onclick=()=>{
+  if(!UNDO)return;const old=JSON.parse(UNDO),now=Date.now();UNDO=null;
+  for(const key of['tasks','bdays','habits','notes','tpls','posts','caps']){
+    const cur=new Map((S[key]||[]).map(x=>[x.id,JSON.stringify(x)]));
+    for(const x of old[key]||[]){if(cur.get(x.id)!==JSON.stringify(x))x.u=now;delete old.gone[x.id]}
+  }
+  for(const kind of['days','marks','rdone'])for(const c of CALS){const A=old[kind][c]||{},B=S[kind][c]||{};for(const k of new Set([...Object.keys(A),...Object.keys(B)]))if(A[k]!==B[k]){if(!(k in A))A[k]=null;old.st[kind[0]+c+k]=now}}
+  for(const k of new Set([...Object.keys(old.hab||{}),...Object.keys(S.hab||{})]))if((old.hab||{})[k]!==S.hab[k]){if(!(k in old.hab))old.hab[k]=null;old.st['h'+k]=now}
+  for(const k of Object.keys(old.prof||{}))old.st['P'+k]=now;
+  S=old;DC={};save();render();if(tab==='prof')renderProf();$('toast').classList.remove('on');haptic(10);
+};
+/* повторы: спросить «только этот раз / все» */
+let scopeCb=null;
+function askScope(verb,cb){scopeCb=cb;$('scopeTitle').textContent=verb+' повторяющееся дело?';show($('scopeSheet'))}
+$('scopeSheet').addEventListener('click',e=>{const b=e.target.closest('[data-scope]');if(!b)return;const cb=scopeCb;scopeCb=null;hide();cb&&cb(b.dataset.scope)});
+/* поиск */
+$('searchBtn').onclick=()=>{$('sq').value='';$('sres').innerHTML='';show($('searchSheet'));setTimeout(()=>$('sq').focus(),300)};
+$('sq').addEventListener('input',()=>{
+  const q=$('sq').value.trim().toLowerCase();if(q.length<2){$('sres').innerHTML='';return}
+  const hl=t=>esc(t).replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<mark>${m}</mark>`);
+  const R=[];
+  for(const t of S.tasks)if(t.title.toLowerCase().includes(q))R.push({k:t.date,h:`<button class="sr" data-sr="t|${t.id}"><b>${t.emoji?t.emoji+' ':''}${hl(t.title)}</b><small>${CAL_N[t.cal]} · ${t.rep?'повтор с '+dateTxt(t.date):dateTxt(t.date)+' '+t.date.slice(0,4)}${t.time?' · '+tspan(t):''}${t.done?' · ✓':''}</small></button>`});
+  for(const n of S.notes)if(n.t.toLowerCase().includes(q))R.push({k:n.m+'-99',h:`<button class="sr" data-sr="n|${n.m}"><b>💭 ${hl(n.t)}</b><small>мысль · ${MONTHS[+n.m.slice(5)-1]} ${n.m.slice(0,4)}</small></button>`});
+  for(const x of S.posts)if((x.t||'').toLowerCase().includes(q))R.push({k:x.m+'-98',h:`<button class="sr" data-sr="p|${x.m}"><b>📝 ${hl(x.t.slice(0,80))}</b><small>пост · ${MONTHS[+x.m.slice(5)-1]} ${x.m.slice(0,4)}</small></button>`});
+  R.sort((a,b)=>a.k<b.k?1:-1);
+  $('sres').innerHTML=R.length?R.slice(0,60).map(r=>r.h).join(''):'<div class="cell" style="color:var(--mut)">Ничего не нашлось</div>';
+});
+$('sres').addEventListener('click',e=>{
+  const b=e.target.closest('[data-sr]');if(!b)return;const [k,v]=b.dataset.sr.split('|');hide();
+  if(k==='t'){const t=S.tasks.find(x=>x.id===v);if(!t)return;goTab('cal');if(S.cal!==t.cal)setCal(t.cal);sel=t.date;const d=fromIso(sel);view={y:d.getFullYear(),m:d.getMonth()};render()}
+  else if(k==='n'){goTab('cal');const [y,m]=v.split('-').map(Number);view={y,m:m-1};render();setTimeout(()=>$('notesBox').scrollIntoView({block:'center',behavior:'smooth'}),200)}
+  else{pfYm=v;goTab('prof')}
+});
+/* крупный текст — на этом устройстве */
+const applyBig=()=>{let on=false;try{on=localStorage.getItem('planer.big')==='1'}catch(e){}document.documentElement.classList.toggle('big',on);$('bigTxt').checked=on};
+$('bigTxt').addEventListener('change',e=>{try{localStorage.setItem('planer.big',e.target.checked?'1':'0')}catch(_){}applyBig();drawStars()});
+applyBig();
+/* подсказки по приложению: один раз при первом входе и по кнопке в настройках */
+const MTIPS=[
+  ['#seg','Три мира: Работа, Учёба и Личное. Переключай — меняется цвет всего экрана'],
+  ['.day.sel,.day.today','Нажми на день — внизу его дела. Свайп по календарю листает месяцы'],
+  ['#fmt','Отметь, где проходит день: офис, удалёнка, больничный, отпуск…'],
+  ['.task','Смахни дело вправо — готово ✓, влево — на завтра. Ошибся — нажми «Отменить» внизу'],
+  ['#fab','Новое дело. Можно одной строкой: «пост завтра с 15 до 16»'],
+  ['[data-tab="pet"]','Бип — твой тамагочи. Ест закрытые дела и иногда пишет подсказки'],
+  ['[data-tab="hot"]','«Горит» — дедлайны, экзамены и просроченное'],
+  ['#searchBtn','Поиск по делам, мыслям и постам'],
+  ['#avBtn','Профиль месяца: обложка, песня месяца, посты и капсула времени 💌'],
+  ['#menuBtn','Настройки: тема, крупный текст, синхронизация, уведомления и PDF']
+];
+let mti=-1;
+function mPlace(){
+  const [q,txt]=MTIPS[mti],el=[...document.querySelectorAll(q)].find(e=>e.offsetParent!==null);if(!el)return mNext();
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  setTimeout(()=>{const r=el.getBoundingClientRect(),T=$('mtip'),R=$('mring'),pd=5;R.hidden=false;
+    Object.assign(R.style,{left:r.left-pd+'px',top:r.top-pd+'px',width:r.width+pd*2+'px',height:r.height+pd*2+'px'});
+    $('mtipText').textContent=txt;$('mtipN').textContent=`${mti+1} / ${MTIPS.length}`;$('mtipNext').textContent=mti===MTIPS.length-1?'Понятно':'Дальше';
+    const w=Math.min(290,innerWidth-32),below=r.bottom+T.offsetHeight+24<innerHeight-90,left=Math.max(16,Math.min(innerWidth-w-16,r.left+r.width/2-w/2));
+    T.style.width=w+'px';T.style.left=left+'px';T.style.top=(below?r.bottom+14:Math.max(16,r.top-T.offsetHeight-14))+'px';T.classList.add('on')},380);
+}
+function mNext(){mti++;if(mti>=MTIPS.length)return mEnd();mPlace()}
+function mEnd(){$('mtip').classList.remove('on');$('mring').hidden=true;try{localStorage.setItem('planer.tour','1')}catch(e){}}
+function startTour(){if(tab!=='cal')goTab('cal');mti=-1;setTimeout(mNext,300)}
+$('mtipNext').onclick=()=>{haptic(6);mNext()};$('mtipSkip').onclick=mEnd;
+$('tourBtn').onclick=()=>{hide();setTimeout(startTour,400)};
+(function autoTour(){
+  if(location.pathname.includes('/demo/'))return;
+  let seen=false;try{seen=localStorage.getItem('planer.tour')==='1'}catch(e){}if(seen)return;
+  const wait=()=>{if($('oracle').classList.contains('on')||$('tech').classList.contains('on')||stack.length)return setTimeout(wait,1200);startTour()};
+  setTimeout(wait,2500);
+})();
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

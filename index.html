@@ -490,7 +490,9 @@ html.dark-over,html.dark-over body{background:#121212}
 @media (min-width:920px){
   .app{max-width:1120px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);column-gap:44px;align-items:start;padding-left:32px;padding-right:32px}
   .app>*{grid-column:1}
-  #pCal{grid-column:2;grid-row:1 / span 6;position:sticky;top:24px}
+  .rcol{grid-column:2;grid-row:1 / span 6;align-self:start;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow-y:auto;scrollbar-width:none;border-radius:28px}
+  .rcol::-webkit-scrollbar{display:none}
+  #pCal{grid-column:auto;grid-row:auto;position:static}
   #pCal .daycard{margin-top:0}
   #pStat,#pHot,#pHab{grid-column:1 / -1}
   #pStat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
@@ -506,7 +508,14 @@ html.dark-over,html.dark-over body{background:#121212}
   .num{font-size:17px}
   .bg{height:70vh}
   .tabs{max-width:520px}
-  .sheet{bottom:24px;border-radius:28px;max-width:520px}
+  .sheet{bottom:24px;border-radius:28px;max-width:520px;transform:translateY(calc(100% + 60px))}
+  .sheet.on{transform:none}
+  .tabs{left:20px;right:auto;top:50%;bottom:auto;transform:translateY(-50%);width:68px;height:auto;max-width:none;margin:0;flex-direction:column;gap:10px;padding:8px;border-radius:34px}
+  .tabs .tb2{flex-direction:column;gap:4px}
+  .tabs .tb2 button{width:52px;height:52px}
+  .fade{display:none}
+  .app{padding-left:120px;padding-bottom:40px}
+  .bg{z-index:0}
   .day:hover{box-shadow:inset 0 0 0 2px var(--fg)}
 }
 /* мышь: подсказка, что можно нажать */
@@ -601,6 +610,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
     <div class="legend" id="legend"></div>
   </section>
 
+  <div class="rcol" id="rcol">
   <main id="pCal">
     <div class="daycard">
       <div class="dayhead"><h2 id="dayTitle"></h2><span id="dayCount"></span></div>
@@ -612,6 +622,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
     <div id="list"></div>
   </main>
   <section class="notes" id="notesBox"></section>
+  </div>
   <main id="pStat" hidden></main>
   <main id="pPet" hidden></main>
   <main id="pHot" hidden></main>
@@ -977,7 +988,7 @@ function renderList(dir){
   const d=fromIso(sel),items=dayItems(S.cal,sel).sort(cmp);
   $('dayTitle').innerHTML=`<small>${WEEK[d.getDay()]}</small>${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
   const left=items.filter(t=>!t.done).length;
-  $('dayCount').textContent=items.length?`${items.length-left}/${items.length}`:'0';
+  $('dayCount').textContent=items.length?`${items.length-left}/${items.length}`:'';
   $('dBar').style.width=(items.length?(items.length-left)/items.length*100:0)+'%';
   const cur=dayFmt(S.cal,sel,items);setEmoBtn($('dEmoji'),S.marks[S.cal][sel]);
   $('fmt').innerHTML=FMT[S.cal].map((f,i)=>`<button class="fchip${cur===f.id?' on':''}${i?' out':''}" data-f="${f.id}">${f.ic}<span>${f.n}</span></button>`).join('');
@@ -1081,7 +1092,7 @@ const TABS=['cal','pet','hot','hab','stat'];
 function goTab(name){
   if(name===tab)return;const dir=TABS.indexOf(name)>TABS.indexOf(tab)?1:-1;tab=name;
   $('tabs').querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x.dataset.tab===tab));
-  $('cal').hidden=$('pCal').hidden=$('notesBox').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';$('pPet').hidden=tab!=='pet';
+  $('cal').hidden=$('pCal').hidden=$('notesBox').hidden=$('rcol').hidden=tab!=='cal';$('pStat').hidden=tab!=='stat';$('pHot').hidden=tab!=='hot';$('pHab').hidden=tab!=='hab';$('pPet').hidden=tab!=='pet';
   $('seg').hidden=tab==='hot'||tab==='hab'||tab==='pet';
   scrollTo(0,0);render(dir);
 }

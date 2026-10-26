@@ -88,6 +88,14 @@ if (N.morning && nowMin >= toMin(N.mtime) && nowMin - toMin(N.mtime) < 180 && !s
 }
 for (const k of Object.keys(sent)) if (Date.now() - sent[k] > 3 * 864e5) { delete sent[k]; changed = true; }
 
+// капсула времени: в день открытия, с 10 утра
+for (const c of S.caps || []) {
+  const k = `cap:${c.id}`;
+  if (!c.opened && c.open <= today && nowMin >= 600 && !sent[k]) {
+    out.push({ title: '💌 Тебе письмо из прошлого', body: `Ты написал его ${c.created.split('-').reverse().join('.')}. Открой Делагочи → профиль.`, tag: k });
+    sent[k] = Date.now(); changed = true;
+  }
+}
 if (TEST) { out.length = 0; out.push({ title: '✦ Проверка связи', body: 'Уведомления работают! Так будут выглядеть напоминания о делах.', tag: 'test-' + Date.now() }); }
 let devices = 0, okN = 0, errs = [];
 if (out.length) {

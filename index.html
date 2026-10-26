@@ -595,6 +595,40 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
 .pet-cls em{font-style:normal;font-weight:500;color:rgba(255,255,255,.5);font-size:12px}
 .pet-lcd svg{width:104px}
 
+/* фокус и событие месяца */
+.mfocus{display:block;width:100%;margin-top:14px;text-align:left;background:var(--soft);border-radius:20px;padding:12px 14px;font-size:14px;line-height:1.4}
+.mfocus b{font-weight:800}
+.mfocus small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.mfocus .mf-empty{color:var(--mut);font-weight:700}
+/* итоги месяца — «сторис» */
+.wrap{position:fixed;inset:0;z-index:55;display:none;color:#121212;overflow:hidden;font-family:-apple-system,"SF Pro Display",Inter,sans-serif}
+.wrap.on{display:block}
+.wr-bars{position:absolute;left:14px;right:60px;top:calc(env(safe-area-inset-top) + 14px);display:flex;gap:4px;z-index:3}
+.wr-bars i{flex:1;height:4px;border-radius:2px;background:rgba(0,0,0,.18);overflow:hidden}
+.wr-bars i b{display:block;height:100%;width:0;background:currentColor}
+.wr-bars i.done b{width:100%}
+.wr-bars i.cur b{animation:wrFill 6s linear forwards}
+@keyframes wrFill{to{width:100%}}
+.wr-x{position:absolute;right:12px;top:calc(env(safe-area-inset-top) + 4px);z-index:4;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:inherit}
+.wr-x svg{width:22px;height:22px}
+.wr-slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:calc(env(safe-area-inset-top) + 60px) 26px calc(env(safe-area-inset-bottom) + 40px);transition:background .4s}
+.wr-slide .k{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
+.wr-slide .big{font-size:min(30vw,150px);font-weight:900;letter-spacing:-.07em;line-height:.85;margin:10px 0}
+.wr-slide .h{font-size:min(10vw,44px);font-weight:800;letter-spacing:-.045em;line-height:1;margin:10px 0}
+.wr-slide p{font-size:17px;line-height:1.4;font-weight:600;opacity:.85;max-width:440px}
+.wr-slide .rows{margin-top:18px;display:grid;gap:10px;max-width:440px}
+.wr-slide .rows div{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding:12px 16px;border-radius:16px;background:rgba(0,0,0,.1)}
+.wr-slide .pet{width:120px;margin:4px 0 14px;background:#C9E265;border-radius:22px;padding:12px}
+.wr-slide .anim{animation:wrIn .6s cubic-bezier(.34,1.3,.64,1) both}
+.wr-slide .anim:nth-child(2){animation-delay:.08s}.wr-slide .anim:nth-child(3){animation-delay:.16s}.wr-slide .anim:nth-child(4){animation-delay:.24s}.wr-slide .anim:nth-child(5){animation-delay:.32s}
+@keyframes wrIn{from{opacity:0;transform:translateY(24px) scale(.96)}}
+.wr-tap{position:absolute;top:70px;bottom:0;width:35%;z-index:2}
+.wr-tap.l{left:0}.wr-tap.r{right:0;width:65%}
+.wr-share{position:relative;z-index:5;margin-top:22px;align-self:flex-start;background:#121212;color:#fff;border-radius:999px;padding:14px 22px;font-size:16px;font-weight:800}
+.wrapbtn{width:100%;margin:22px 0 12px;padding:16px;border-radius:22px;background:#121212;color:#fff;font-size:16px;font-weight:800;text-align:left;display:flex;justify-content:space-between}
+.wrapbtn span{color:#D4FF3A}
+:root[data-theme="dark"] .wrapbtn{background:#222226}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -626,6 +660,7 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
     <div class="wd"><div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div><div>СБ</div><div>ВС</div></div>
     <div class="grid" id="grid"></div>
     <div class="legend" id="legend"></div>
+    <button class="mfocus" id="mfocus"></button>
   </section>
 
   <div class="rcol" id="rcol">
@@ -688,6 +723,13 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   </div>
 </div>
 
+<div class="wrap" id="wrap" role="dialog" aria-modal="true" aria-label="Итоги месяца">
+  <div class="wr-bars" id="wrBars"></div>
+  <button class="wr-x" id="wrX" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="wr-slide" id="wrSlide"></div>
+  <div class="wr-tap l" data-wr="-1"></div><div class="wr-tap r" data-wr="1"></div>
+</div>
+
 <div class="fade" aria-hidden="true"></div>
 <nav class="tabs" id="tabs">
   <div class="tb2">
@@ -714,6 +756,8 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
     <label class="cell"><span>Начало</span><input class="pick" id="fTime" type="time"></label>
     <label class="cell"><span>Конец</span><input class="pick" id="fEnd" type="time"></label>
     <label class="cell"><span>Повтор</span><select class="pick" id="fRep"><option value="">Нет</option><option value="day">Каждый день</option><option value="wd">По будням</option><option value="week">Каждую неделю</option><option value="2week">Через неделю</option><option value="month">Каждый месяц</option></select></label>
+    <label class="cell"><span>Напомнить</span><select class="pick" id="fRem"><option value="">Как в настройках</option><option value="off">Не напоминать</option><option value="0">В момент начала</option><option value="15">За 15 минут</option><option value="60">За 1 час</option><option value="180">За 3 часа</option><option value="1440">За день</option><option value="at">В своё время…</option></select></label>
+    <label class="cell" id="fRemAtRow"><span>Когда</span><input class="pick" id="fRemAt" type="datetime-local"></label>
     <label class="cell" id="fFmtRow"><span>Формат</span><select class="pick" id="fFmt"><option value="">—</option><option value="uni">Институт</option><option value="sdo">СДО</option></select></label>
   </div>
   <div class="ghead">Пометка</div>
@@ -845,6 +889,19 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
   <div class="group" id="noteDelWrap"><button class="cell red" id="noteDel">Удалить мысль</button></div>
 </div>
 
+<div class="sheet ios" id="monthSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="nav"><button data-close>Отмена</button><b id="mTitle">Месяц</b><button class="done" id="mSave">Готово</button></div>
+  <div class="ghead">🎯 Фокус месяца</div>
+  <div class="group"><div class="cell"><input class="cin" id="mFocus" maxlength="60" placeholder="Например: сдать сессию без долгов"></div></div>
+  <div class="ghead">⭐ Главное событие</div>
+  <div class="group">
+    <div class="cell"><input class="cin" id="mEvent" maxlength="60" placeholder="Например: поездка в Питер"></div>
+    <label class="cell"><span>Дата</span><input class="pick" id="mDate" type="date"></label>
+  </div>
+  <div class="ghead" style="text-transform:none;letter-spacing:0">Фокус и событие попадут в итоги месяца. День события отметится ⭐ в календаре.</div>
+</div>
+
 <div class="sheet ios" id="emojiSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <div class="nav"><button id="eClear">Убрать</button><b id="eTitle">Смайлик</b><button class="done" data-close>Готово</button></div>
@@ -904,7 +961,7 @@ let S=load()||{tasks:seed(),theme:'light',cal:'w'};
 if(!S.days){S.days=seedDays();S.daysDemo=true}
 if(!S.marks)S.marks={w:{},s:{}};
 if(!S.gone)S.gone={};if(!S.st)S.st={};
-if(!S.notes)S.notes=[];if(!S.tpls)S.tpls=[];if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
+if(!S.notes)S.notes=[];if(!S.months)S.months={};if(!S.tpls)S.tpls=[];if(!S.rdone)S.rdone={w:{},s:{}};for(const k of['days','marks','rdone'])if(!S[k].p)S[k].p={};if(!S.bdays)S.bdays=[];if(!S.habits)S.habits=[];if(!S.hab)S.hab={};
 /* смена отметки дня с меткой времени — чтобы при синхронизации победила последняя правка */
 function setMap(kind,cal,date,val){S[kind][cal][date]=val;S.st[kind[0]+cal+date]=Date.now()}
 let tab='cal';
@@ -993,7 +1050,7 @@ function renderCal(dir){
     const d=new Date(start);d.setDate(start.getDate()+i);
     if(i===35&&d.getMonth()!==view.m)break;
     const k=iso(d),ev=dayItems(S.cal,k).sort(cmp);
-    const f=dayFmt(S.cal,k,ev),mk=S.marks[S.cal][k]||fmtEmo(S.cal,f)||(S.cal==='w'&&bdayOn(k).length?'🎂':'');
+    const f=dayFmt(S.cal,k,ev),mk=S.marks[S.cal][k]||((S.months[k.slice(0,7)]||{}).edate===k?'⭐':'')||fmtEmo(S.cal,f)||(S.cal==='w'&&bdayOn(k).length?'🎂':'');
     const cls=['day',d.getMonth()!==view.m?'out':'',k===today?'today':'',k===sel?'sel':'',f?fmtCls(S.cal,f):''].join(' ');
     h+=`<button class="${cls}" data-d="${k}"><span class="num">${d.getDate()}</span>${mk?`<span class="temo">${mk}</span>`:''}<span class="dots">${ev.slice(0,3).map(t=>`<i style="background:${k===sel?'var(--inv-fg)':typeOf(t.cal,t.type).c};opacity:${t.done?.35:1}"></i>`).join('')}</span></button>`;
   }
@@ -1015,7 +1072,7 @@ function renderList(dir){
   const today=iso(new Date());
   $('mvBtn').classList.toggle('on',left>0&&sel<=today);$('mvBtn').textContent=`Перенести несделанное на завтра · ${left}`;
   L.innerHTML=bd+(items.length?'<div class="lcard">'+items.map(t=>{const ty=typeOf(t.cal,t.type);
-    const meta=[tspan(t)||'весь день',t.plat,t.fmt?(t.fmt==='uni'?'институт':'СДО'):'',t.rep?'↻':''].filter(Boolean).join(' · ');
+    const meta=[tspan(t)||'весь день',t.plat,t.fmt?(t.fmt==='uni'?'институт':'СДО'):'',t.rep?'↻':'',(t.rem&&t.rem!=='off')||t.remAt?'🔔':''].filter(Boolean).join(' · ');
     return `<div class="swr"><div class="sact l">✓ Готово</div><div class="sact r">Завтра →</div><div class="task${t.done?' done':''}" style="--c:${ty.c};--on:${ty.on}" data-id="${t.vid||t.id}">
       <button class="chk" data-chk aria-label="Отметить выполненной"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       <button class="tb" data-edit><div class="tt">${t.emoji?`<span class="temj">${t.emoji}</span>`:''}${esc(t.title)}</div><div class="tm">${esc(meta)}</div></button>
@@ -1038,7 +1095,7 @@ function streak(){
   return n;
 }
 function render(dir){renderHello();
-  if(tab==='cal'){renderCal(dir);renderList(dir);renderNotes()}
+  if(tab==='cal'){renderCal(dir);renderList(dir);renderNotes();renderFocus()}
   else{$('month').textContent=MONTHS[view.m];$('year').textContent=view.y;
     if(tab==='stat')renderStats(dir);else if(tab==='hot')renderHotPage(dir);else if(tab==='pet')renderPet(dir);else renderHabPage(dir)}
   if(window.petBadge)petBadge();
@@ -1133,8 +1190,8 @@ function renderStats(dir){
   for(let d=1;d<=dim;d++){const a=T.filter(t=>t.date===`${ym}-${pad(d)}`);per.push([a.filter(t=>t.done).length,a.length])}
   const dots=per.map(([dn,tot])=>`<div class="dm">${[0,1,2,3,4].map(j=>`<i class="${j<dn?'a':j<tot?'b':''}"></i>`).join('')}</div>`).join('');
   const P=$('pStat');
-  P.innerHTML=`
-  <div class="card pop"><h4>Выполнено за месяц</h4>
+  P.innerHTML=`<button class="wrapbtn" data-wrap="${ym}">▶ Итоги: ${MONTHS[view.m]} <span>смотреть</span></button>
+  <div class="card pop" style="margin-top:0"><h4>Выполнено за месяц</h4>
     <div class="kpi"><b>${pct}%</b><span>${done} из ${T.length} ${{w:'рабочих',s:'учебных',p:'личных'}[c]} задач</span></div>
     <div class="bar"><i style="width:${pct}%;background:repeating-linear-gradient(-45deg,var(--inv-fg) 0 5px,transparent 5px 10px);box-shadow:inset 0 0 0 2px var(--inv-fg);border-radius:8px"></i></div></div>
   <div class="two">
@@ -1173,7 +1230,7 @@ function setCal(c){
 $('seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setCal(b.dataset.c)});
 
 /* месяцы */
-function shiftMonth(n){view.m+=n;if(view.m<0){view.m=11;view.y--}if(view.m>11){view.m=0;view.y++}tab==='cal'?(renderCal(n),renderNotes()):render(n)}
+function shiftMonth(n){view.m+=n;if(view.m<0){view.m=11;view.y--}if(view.m>11){view.m=0;view.y++}tab==='cal'?(renderCal(n),renderNotes(),renderFocus()):render(n)}
 $('prev').onclick=()=>shiftMonth(-1);$('next').onclick=()=>shiftMonth(1);
 $('titleBtn').onclick=()=>{const t=new Date();const dir=Math.sign((t.getFullYear()-view.y)*12+t.getMonth()-view.m);view={y:t.getFullYear(),m:t.getMonth()};sel=iso(t);render(dir||0)};
 $('grid').addEventListener('click',e=>{
@@ -1265,7 +1322,7 @@ function openTask(t){
   $('shTitle').textContent=t?'Задача':{w:'Рабочая задача',s:'Учебная задача',p:'Личное дело'}[S.cal];
   $('fTitle').value=t?t.title:'';$('fDate').value=t?t.date:sel;$('fTime').value=t?t.time:'';$('fEnd').value=(t&&t.end)||'';
   fType=t?t.type:TYPES[S.cal][0].id;$('fErr').textContent='';fEmo=(t&&t.emoji)||'';setEmoBtn($('fEmoji'),fEmo);
-  $('fRep').value=t&&t.rep?t.rep.k:'';$('fFmt').value=(t&&t.fmt)||'';$('fPlat').value=(t&&t.plat)||'';$('fStage').value=(t&&t.stage)||'idea';
+  $('fRep').value=t&&t.rep?t.rep.k:'';$('fRem').value=(t&&t.rem)||'';$('fRemAt').value=(t&&t.remAt)||'';remRow();$('fFmt').value=(t&&t.fmt)||'';$('fPlat').value=(t&&t.plat)||'';$('fStage').value=(t&&t.stage)||'idea';
   tplEditing=false;renderTpls(!t);
   $('fFmtRow').style.display=S.cal==='s'?'':'none';$('focusWrap').style.display=t?'block':'none';$('qHint').textContent='';qman={};
   $('fDelWrap').style.display=t?'block':'none';
@@ -1318,7 +1375,7 @@ $('fSave').onclick=()=>{
   if(!title){$('fErr').textContent='Напиши, что нужно сделать';$('fTitle').focus();return}
   const date=$('fDate').value||sel,time=$('fTime').value,end=time&&$('fEnd').value?$('fEnd').value:null;
   if(end&&end<=time){$('fErr').textContent='Конец должен быть позже начала';return}
-  const extra={end,rep:$('fRep').value?{k:$('fRep').value}:null,fmt:S.cal==='s'?($('fFmt').value||null):null,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null};
+  const rv=$('fRem').value,extra={rem:rv||null,remAt:rv==='at'?($('fRemAt').value||null):null,end,rep:$('fRep').value?{k:$('fRep').value}:null,fmt:S.cal==='s'?($('fFmt').value||null):null,plat:fType==='ct'?($('fPlat').value||null):null,stage:fType==='ct'?$('fStage').value:null};
   if(editing)Object.assign(editing,{title,date,time,type:fType,emoji:fEmo,...extra,demo:false,u:Date.now()});
   else S.tasks.push({id:newId(),cal:S.cal,date,time,title,type:fType,emoji:fEmo,...extra,done:false,u:Date.now()});
   save();sel=date;const d=fromIso(date);view={y:d.getFullYear(),m:d.getMonth()};hide();render();
@@ -1340,7 +1397,7 @@ $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse((await f.text()).replace(/^\ufeff/,''));if(!Array.isArray(d.tasks))throw 0;
     if(!confirm(`Заменить текущие задачи задачами из файла (${d.tasks.length} шт.)?`))return;
-    S=Object.assign({theme:S.theme,cal:'w',notes:[],tpls:[],days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
+    S=Object.assign({theme:S.theme,cal:'w',months:{},notes:[],tpls:[],days:{w:{},s:{},p:{}},marks:{w:{},s:{},p:{}},rdone:{w:{},s:{},p:{}},bdays:[],habits:[],hab:{},gone:{},st:{}},d);save();applyTheme();hide();render()}
   catch(_){alert('Это не файл копии Делагочи')}
   e.target.value='';
 };
@@ -1386,7 +1443,7 @@ const gh=(path,opt={})=>fetch('https://api.github.com'+path,{...opt,cache:'no-st
   headers:{Authorization:'Bearer '+token(),Accept:'application/vnd.github+json','Content-Type':'application/json'}});
 const b64e=str=>{const b=new TextEncoder().encode(str);let r='';for(let i=0;i<b.length;i+=8192)r+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(r)};
 const b64d=str=>new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\n/g,'')),c=>c.charCodeAt(0)));
-const shared=x=>JSON.stringify({tpls:x.tpls,notes:x.notes,notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
+const shared=x=>JSON.stringify({months:x.months,tpls:x.tpls,notes:x.notes,notify:x.notify,tasks:x.tasks,gone:x.gone,days:x.days,marks:x.marks,rdone:x.rdone,bdays:x.bdays,habits:x.habits,hab:x.hab,st:x.st});
 function merge(r){
   const T={};
   for(const t of [...S.tasks,...(r.tasks||[])]){const o=T[t.id];if(!o||(t.u||0)>(o.u||0))T[t.id]=t}
@@ -1405,6 +1462,8 @@ function merge(r){
     S[key]=Object.values(M).filter(t=>!(S.gone[t.id]>=(t.u||0)));
   }
   if((rst.n||0)>(S.st.n||0)&&r.notify){S.notify=r.notify;S.st.n=rst.n}
+  const RM=r.months||{};
+  for(const k of Object.keys(RM)){const ls=S.st['M'+k]||0,rs=rst['M'+k]||0;if(rs>ls||!(k in S.months)){S.months[k]=RM[k];if(rs)S.st['M'+k]=rs}}
   const RH=r.hab||{};
   for(const k of new Set([...Object.keys(S.hab),...Object.keys(RH)])){
     const ls=S.st['h'+k]||0,rs=rst['h'+k]||0;
@@ -1895,6 +1954,7 @@ function bipThink(){
   if(!fun&&!L['j:'+wk]){const sat=addDay(today,(6-new Date().getDay()+7)%7||7);return say('j:'+wk,'Ты давно ничего не делал для себя. Запланируем отдых на выходные? 💜',[{l:'Запланировать',a:'add',v:{cal:'p',title:'Отдых',date:sat,type:'fun'}},{l:'Позже',a:'ok',g:1}])}
   if(h>=19&&S.habits.length&&!L['h:'+today]){const left=S.habits.filter(x=>!S.hab[today+'|'+x.id]);if(left.length)return say('h:'+today,`Ещё не отмечено: ${left.map(x=>(x.e||'✦')+' '+x.n).join(', ')}. Сделал?`,left.slice(0,3).map(x=>({l:'Отметить '+(x.e||x.n),a:'hab',v:x.id})))}
   {const bc=bipClass(),stc=streak();if(stc>=3&&bc.cls!=='none'&&L.cls!==bc.cls){L.cls=bc.cls;return say('cls:'+bc.cls+':'+today,BCLS[bc.cls].say)}}
+  if(new Date().getDate()<=3){const pm=addDay(today.slice(0,8)+'01',-1).slice(0,7);if(!L['wr:'+pm]&&monthItems(pm).length)return say('wr:'+pm,`Твои итоги за ${MONTHS[+pm.slice(5)-1]} готовы ✦ Посмотрим?`,[{l:'Смотреть итоги',a:'wrap',v:pm},{l:'Позже',a:'ok',g:1}])}
   const st=streak();if([3,7,14,21,30,50,100].includes(st)&&!L['s:'+st])return say('s:'+st,`${st} ${plural(st,['день','дня','дней'])} подряд! ${st===3?'Я вылупился в малыша':st===7?'Я вырос в подростка':st===21?'Я стал взрослым':'Ты легенда'} 🎉`);
   if(h>=18&&!L['t:'+today]){const n=dayItems(null,addDay(today,1)).length;if(n>=5)return say('t:'+today,`Завтра ${n} ${plural(n,['дело','дела','дел'])} — плотно. Может, что-то начать сегодня или перенести?`,[{l:'Открыть завтра',a:'day',v:addDay(today,1)},{l:'Ок',a:'ok',g:1}])}
 }
@@ -1937,6 +1997,7 @@ $('pPet').addEventListener('click',e=>{
     setTimeout(()=>{openTask();$('fTitle').value=v.title;$('fDate').value=v.date;qman={date:true};fType=v.type;qman.type=true;renderTypes()},120);return}
   else if(act.a==='day'){goTab('cal');sel=act.v;const d=fromIso(sel);view={y:d.getFullYear(),m:d.getMonth()};render();return}
   else if(act.a==='tab'){goTab(act.v);return}
+  else if(act.a==='wrap'){openWrap(act.v);return}
   render();
 });
 /* Бип «думает» при запуске и когда возвращаешься в приложение */
@@ -2030,6 +2091,83 @@ function drawStars(){
 }
 let stT;addEventListener('resize',()=>{clearTimeout(stT);stT=setTimeout(drawStars,200)});
 drawStars();
+
+/* напоминание: строка «Когда» видна только для «В своё время…» */
+function remRow(){$('fRemAtRow').style.display=$('fRem').value==='at'?'':'none'}
+$('fRem').addEventListener('change',()=>{remRow();if($('fRem').value==='at'&&!$('fRemAt').value){const d=$('fDate').value||sel;$('fRemAt').value=d+'T'+($('fTime').value||'09:00')}});
+
+/* фокус и событие месяца */
+const ymOf=()=>`${view.y}-${pad(view.m+1)}`;
+function renderFocus(){
+  const M=S.months[ymOf()]||{},el=$('mfocus');
+  el.innerHTML=M.focus||M.event?`${M.focus?`🎯 <b>Фокус:</b> ${esc(M.focus)}`:''}${M.event?`${M.focus?'<br>':''}⭐ <b>Событие:</b> ${esc(M.event)}${M.edate?` <small>${dateTxt(M.edate)}</small>`:''}`:''}`
+    :`<span class="mf-empty">＋ Фокус и главное событие на ${MONTHS[view.m]}</span>`;
+}
+$('mfocus').onclick=()=>{const M=S.months[ymOf()]||{};$('mTitle').textContent=MONTHS[view.m].replace(/^./,c=>c.toUpperCase());$('mFocus').value=M.focus||'';$('mEvent').value=M.event||'';$('mDate').value=M.edate||'';show($('monthSheet'))};
+$('mSave').onclick=()=>{const k=ymOf();S.months[k]={focus:$('mFocus').value.trim(),event:$('mEvent').value.trim(),edate:$('mDate').value||'',u:Date.now()};S.st['M'+k]=Date.now();save();hide();render();haptic(10)};
+
+/* итоги месяца — «сторис» как в Spotify Wrapped */
+function monthItems(ym){const out=[],[y,m]=ym.split('-').map(Number),n=new Date(y,m,0).getDate();for(let i=1;i<=n;i++)out.push(...dayItems(null,`${ym}-${pad(i)}`));return out}
+function wrapData(ym){
+  const [y,m]=ym.split('-').map(Number),n=new Date(y,m,0).getDate(),it=monthItems(ym),done=it.filter(t=>t.done);
+  const by={w:0,s:0,p:0};done.forEach(t=>by[t.cal]++);
+  let best=null,bestN=0;for(let i=1;i<=n;i++){const k=`${ym}-${pad(i)}`,c=done.filter(t=>t.date===k).length;if(c>bestN){bestN=c;best=k}}
+  const fm=c=>{const r={};for(let i=1;i<=n;i++){const k=`${ym}-${pad(i)}`;if(k>=iso(new Date()))continue;const f=dayFmt(c,k);if(f)r[f]=(r[f]||0)+1}return r};
+  const hb=S.habits.map(h=>{let c=0;for(let i=1;i<=n;i++)if(S.hab[`${ym}-${pad(i)}|${h.id}`])c++;return{h,c}}).sort((a,b)=>b.c-a.c)[0];
+  const tc={};done.forEach(t=>{const k=t.cal+':'+t.type;tc[k]=(tc[k]||0)+1});const topT=Object.entries(tc).sort((a,b)=>b[1]-a[1])[0];
+  return {ym,mName:MONTHS[m-1],total:it.length,done:done.length,by,best,bestN,fw:fm('w'),fs:fm('s'),hb,topT,M:S.months[ym]||{},cls:bipClass()};
+}
+let WR=null,wrI=0,wrT=null;
+const WCOL=['#D4FF3A','#6B3CF6','#FF5DA8','#121212','#4FE3E8','#FF7A2F','#D4FF3A'];
+function wrSlides(D){
+  const S2=[],pc=D.total?Math.round(D.done/D.total*100):0;
+  S2.push({bg:'#D4FF3A',html:`<div class="k anim">Делагочи · итоги</div><div class="big anim">${D.mName}</div><p class="anim">Посмотрим, каким был твой месяц ✦</p>`});
+  S2.push({bg:'#6B3CF6',fg:'#fff',html:`<div class="k anim">Ты закрыл</div><div class="big anim">${D.done}</div><div class="h anim">${plural(D.done,['дело','дела','дел'])} из ${D.total}</div><p class="anim">${pc>=80?'Это мощно. Бип гордится 💪':pc>=50?'Больше половины — отличный темп.':'Каждое закрытое дело считается ✦'}</p>`});
+  S2.push({bg:'#FF5DA8',html:`<div class="k anim">Куда ушла энергия</div><div class="rows">${[['w','💼 Работа'],['s','🎓 Учёба'],['p','💜 Личное']].map(([k,n])=>`<div class="anim"><span>${n}</span><span>${D.by[k]}</span></div>`).join('')}</div>`});
+  if(D.best)S2.push({bg:'#121212',fg:'#fff',html:`<div class="k anim">Самый продуктивный день</div><div class="h anim" style="color:#D4FF3A">${dateTxt(D.best)}</div><div class="big anim">${D.bestN}</div><p class="anim">${plural(D.bestN,['дело','дела','дел'])} за один день. Вот это заход!</p>`});
+  const fw=D.fw,fs=D.fs;if(Object.keys(fw).length||Object.keys(fs).length)S2.push({bg:'#4FE3E8',html:`<div class="k anim">Где ты был</div><div class="rows">${[['🏢 Офис',fw.off],['🏠 Удалёнка',fw.rem],['🤒 Больничный',fw.sick],['🌴 Отпуск',fw.vac],['🎓 Институт',fs.uni],['💻 СДО',fs.sdo],['☀️ Каникулы',fs.hol]].filter(x=>x[1]).map(([n,c])=>`<div class="anim"><span>${n}</span><span>${c} ${plural(c,['день','дня','дней'])}</span></div>`).join('')}</div>`});
+  if(D.hb&&D.hb.c)S2.push({bg:'#FF7A2F',html:`<div class="k anim">Любимая привычка</div><div class="h anim">${D.hb.h.e||'✦'} ${esc(D.hb.h.n)}</div><div class="big anim">${D.hb.c}</div><p class="anim">${plural(D.hb.c,['день','дня','дней'])} из месяца. Энергия Бипа на максимуме ⚡</p>`});
+  const C=BCLS[D.cls.cls];S2.push({bg:'#C9E265',html:`<div class="k anim">А Бип в этом месяце —</div><div class="pet anim">${bipSvg('h',false,D.cls.cls==='none'?[]:C.acc.concat(C.acc2))}</div><div class="h anim">${D.cls.cls==='none'?'ещё выбирает себя':C.n+' '+C.e}</div>`});
+  if(D.M.focus||D.M.event)S2.push({bg:'#6B3CF6',fg:'#fff',html:`${D.M.focus?`<div class="k anim">Фокус месяца</div><div class="h anim">🎯 ${esc(D.M.focus)}</div>`:''}${D.M.event?`<div class="k anim" style="margin-top:18px">Главное событие</div><div class="h anim">⭐ ${esc(D.M.event)}</div>`:''}`});
+  S2.push({bg:'#D4FF3A',html:`<div class="k anim">Это был твой</div><div class="big anim">${D.mName}</div><p class="anim">${D.done} ${plural(D.done,['дело','дела','дел'])} · лучший день ${D.best?dateTxt(D.best):'—'} · ${D.cls.cls==='none'?'Бип растёт':C.n}</p><button class="wr-share anim" id="wrShare">Поделиться в сторис ↗</button>`,last:true});
+  return S2;
+}
+function wrShow(i){
+  const L=WR.slides;wrI=Math.max(0,Math.min(L.length-1,i));const sl=L[wrI];
+  $('wrSlide').style.background=sl.bg;$('wrap').style.color=sl.fg||'#121212';$('wrSlide').innerHTML=sl.html;
+  $('wrBars').innerHTML=L.map((_,j)=>`<i class="${j<wrI?'done':j===wrI?'cur':''}"><b></b></i>`).join('');
+  clearTimeout(wrT);if(!sl.last)wrT=setTimeout(()=>wrShow(wrI+1),6000);
+  const sh=$('wrShare');if(sh)sh.onclick=e=>{e.stopPropagation();wrShareImg()};
+}
+function openWrap(ym){WR={D:wrapData(ym)};WR.slides=wrSlides(WR.D);$('wrap').classList.add('on');document.documentElement.classList.add('dark-over');wrShow(0);haptic(12)}
+function closeWrap(){clearTimeout(wrT);$('wrap').classList.remove('on');document.documentElement.classList.remove('dark-over');barColor()}
+$('wrX').onclick=closeWrap;
+$('wrap').addEventListener('click',e=>{const t=e.target.closest('[data-wr]');if(t){const d=+t.dataset.wr;if(d>0&&wrI===WR.slides.length-1)return;wrShow(wrI+d);haptic(6)}});
+$('pStat').addEventListener('click',e=>{const b=e.target.closest('[data-wrap]');if(b)openWrap(b.dataset.wrap)});
+/* картинка для сторис 1080×1920 */
+async function wrShareImg(){
+  const D=WR.D,c=document.createElement('canvas');c.width=1080;c.height=1920;const x=c.getContext('2d');
+  x.fillStyle='#6B3CF6';x.fillRect(0,0,1080,1920);
+  x.fillStyle='#D4FF3A';pRR(x,60,60,960,700,70);x.fill();
+  x.fillStyle='#121212';x.font=PF(800,44);x.fillText('ДЕЛАГОЧИ · ИТОГИ',120,170);
+  x.font=PF(900,200);x.fillText(D.mName.replace(/^./,s=>s.toUpperCase()),110,400);
+  x.font=PF(900,240);x.fillText(String(D.done),110,680);const nw=x.measureText(String(D.done)).width;x.font=PF(800,60);x.fillText(plural(D.done,['дело','дела','дел'])+' закрыто',110+nw+30,660);
+  const rows=[['💼 Работа',D.by.w],['🎓 Учёба',D.by.s],['💜 Личное',D.by.p]];
+  rows.forEach(([n,v],i)=>{const yy=840+i*150;x.fillStyle='rgba(255,255,255,.14)';pRR(x,60,yy,960,120,40);x.fill();x.fillStyle='#fff';x.font=PF(800,56);x.fillText(n,110,yy+80);x.textAlign='right';x.fillText(String(v),980,yy+80);x.textAlign='left'});
+  x.fillStyle='#121212';pRR(x,60,1320,960,460,70);x.fill();
+  x.fillStyle='#C9E265';pRR(x,110,1370,300,300,40);x.fill();
+  const C=BCLS[D.cls.cls],acc=D.cls.cls==='none'?[]:C.acc.concat(C.acc2),G={};
+  BIP.h.forEach((row,yy)=>[...row].forEach((ch,xx)=>{if(ch!=='.')G[xx+','+(yy+3)]=ch==='w'?'#C9E265':'#2E3A12'}));
+  for(const a of acc){const A=ACC[a];(A.k||[]).forEach(([q,w])=>G[q+','+w]='#2E3A12');(A.w||[]).forEach(([q,w])=>G[q+','+w]='#C9E265')}
+  for(const k in G){const [q,w]=k.split(',').map(Number);x.fillStyle=G[k];x.fillRect(140+q*15,1390+w*15,15.5,15.5)}
+  x.fillStyle='#fff';x.font=PF(800,52);x.fillText(D.cls.cls==='none'?'Бип растёт':C.n,460,1480);
+  x.fillStyle='#D4FF3A';x.font=PF(700,40);x.fillText(D.best?`лучший день: ${dateTxt(D.best)}`:'✦',460,1560);
+  if(D.M.focus){x.fillStyle='rgba(255,255,255,.7)';x.font=PF(600,36);x.fillText('🎯 '+D.M.focus.slice(0,30),460,1630)}
+  x.fillStyle='rgba(255,255,255,.6)';x.font=PF(600,34);x.fillText('sarkoruslan-ctrl.github.io/planer',120,1870);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png')),file=new File([blob],`Итоги ${D.mName}.png`,{type:'image/png'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
+}
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

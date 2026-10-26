@@ -42,29 +42,43 @@ function occurs(t, k) {
     case 'month': return d.getUTCDate() === b.getUTCDate();
   } return false;
 }
+// дела на сегодня и завтра (завтрашние нужны для «напомнить за день»), включая повторы
+const tomorrow = (() => { const d = fromIso(today); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); })();
 const items = [];
-for (const t of S.tasks || []) {
-  if (!t.rep) { if (t.date === today && !t.done) items.push({ ...t, key: t.id }); continue; }
-  if (!occurs(t, today)) continue;
-  const vid = t.id + '@' + today, st = ((S.rdone || {})[t.cal] || {})[vid];
-  if (st !== true && st !== 'skip') items.push({ ...t, key: vid });
+for (const day of [today, tomorrow]) for (const t of S.tasks || []) {
+  if (!t.rep) { if (t.date === day && !t.done) items.push({ ...t, key: t.id, day }); continue; }
+  if (!occurs(t, day)) continue;
+  const vid = t.id + '@' + day, st = ((S.rdone || {})[t.cal] || {})[vid];
+  if (st !== true && st !== 'skip') items.push({ ...t, key: vid, day });
 }
+// напоминания «в своё время» на любую дату
+for (const t of S.tasks || []) if (t.rem === 'at' && t.remAt && !t.done && !t.rep) items.push({ ...t, key: t.id + ':at', day: t.remAt.slice(0, 10), at: true });
 const CAL = { w: 'Работа', s: 'Учёба', p: 'Личное' };
 
 const { data: sentRaw, sha: sentSha } = await getJson('sent.json');
 const sent = sentRaw || {}; let changed = false;
 const out = [];
+const nowAbs = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute) / 6e4;
+const abs = (day, hm) => { const [y, m, d] = day.split('-').map(Number), [h, mi] = hm.split(':').map(Number); return Date.UTC(y, m - 1, d, h, mi) / 6e4; };
 for (const t of items) {
-  if (!t.time) continue;
-  const at = toMin(t.time) - N.lead, k = `t:${today}:${t.key}`;
-  if (nowMin >= at && nowMin - at < 45 && nowMin <= toMin(t.time) + 5 && !sent[k]) {
-    out.push({ title: N.lead ? `⏰ Через ${N.lead} мин` : '⏰ Пора', body: `${t.emoji ? t.emoji + ' ' : ''}${t.title} · ${t.time} · ${CAL[t.cal]}`, tag: k });
+  let at, title;
+  if (t.at) { at = abs(t.day, t.remAt.slice(11, 16)); title = '🔔 Напоминание'; }
+  else {
+    if (!t.time || t.rem === 'off' || t.rem === 'at') continue;
+    const lead = t.rem != null && t.rem !== '' ? +t.rem : N.lead;
+    at = abs(t.day, t.time) - lead;
+    title = lead >= 1440 ? '📅 Завтра' : lead >= 60 ? `⏰ Через ${lead / 60} ч` : lead ? `⏰ Через ${lead} мин` : '⏰ Пора';
+  }
+  const k = `t:${t.day}:${t.key}`;
+  if (nowAbs >= at && nowAbs - at < 45 && !sent[k]) {
+    out.push({ title, body: `${t.emoji ? t.emoji + ' ' : ''}${t.title}${t.time ? ' · ' + t.time + (t.end ? '–' + t.end : '') : ''} · ${CAL[t.cal]}`, tag: k });
     sent[k] = Date.now(); changed = true;
   }
 }
+const list0 = items.filter(t => t.day === today && !t.at);
 const mk = `m:${today}`;
 if (N.morning && nowMin >= toMin(N.mtime) && nowMin - toMin(N.mtime) < 180 && !sent[mk]) {
-  const list = items.slice().sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
+  const list = list0.slice().sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
   const bd = (S.bdays || []).filter(b => b.md === today.slice(5)).map(b => b.n);
   const plural = (n, f) => f[(n % 10 === 1 && n % 100 !== 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 1 : 2];
   let body = list.length ? `Сегодня ${list.length} ${plural(list.length, ['дело', 'дела', 'дел'])}: ${list.slice(0, 3).map(t => (t.time ? t.time + ' ' : '') + t.title).join(', ')}${list.length > 3 ? ` и ещё ${list.length - 3}` : ''}` : 'Сегодня свободный день ✨';

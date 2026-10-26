@@ -578,11 +578,23 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
 #tplList .chip .x{font-size:15px;line-height:1;margin-left:2px;opacity:.7}
 #tplList.edit .chip{background:var(--cell);box-shadow:inset 0 0 0 1.5px #FF3B30;color:#FF3B30}
 
+/* фон: пиксельное звёздное поле ✦ — бледное, тихо мерцает, цвет под мир */
+.bg{display:none}
+.stars{position:fixed;inset:0;z-index:0;pointer-events:none;--st:rgba(255,255,255,.22);--st2:rgba(212,255,58,.3)}
+:root[data-cal="s"] .stars{--st:rgba(18,18,18,.13);--st2:rgba(107,60,246,.2)}
+:root[data-cal="p"] .stars{--st:rgba(255,255,255,.32);--st2:rgba(18,18,18,.12)}
+:root[data-theme="dark"] .stars{--st:rgba(255,255,255,.14);--st2:rgba(212,255,58,.2)}
+.stars svg{position:absolute;inset:0;width:100%;height:100%}
+.stars g{animation:stTw 5s ease-in-out infinite}
+@keyframes stTw{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.stars g{animation:none}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 <div class="bg" id="bg" data-cal="w" aria-hidden="true"><i class="bw"></i><i class="bs"></i><i class="bp"></i></div>
+<div class="stars" id="stars" aria-hidden="true"></div>
 <div class="app">
   <header class="top">
     <button id="titleBtn" style="text-align:left" aria-label="К сегодняшнему дню">
@@ -1963,6 +1975,21 @@ $('tplSave').onclick=()=>{
   if(same)Object.assign(same,data);else S.tpls.push({id:newId(),...data});
   save();haptic(12);$('qHint').textContent=same?'✦ Шаблон обновлён':'✦ Шаблон сохранён — он появится в новой задаче';
 };
+
+/* звёздное поле: звёзды — пиксельные крестики трёх размеров, раскиданы случайно, но одинаково при каждом открытии */
+const STAR=[['x'],['.x.','xxx','.x.'],['..x..','..x..','xxxxx','..x..','..x..']];
+function drawStars(){
+  const W=innerWidth,H=innerHeight,px=3,n=Math.round(W*H/16000);let seed=7,g='';
+  const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+  for(let i=0;i<n;i++){
+    const sz=rnd()<.55?0:rnd()<.7?1:2,map=STAR[sz],x=Math.round(rnd()*W/px)*px,y=Math.round(rnd()*H/px)*px,c=rnd()<.7?'var(--st)':'var(--st2)';
+    let r='';map.forEach((row,yy)=>[...row].forEach((ch,xx)=>{if(ch==='x')r+=`<rect x="${x+xx*px}" y="${y+yy*px}" width="${px}" height="${px}"/>`}));
+    g+=`<g fill="${c}" style="animation-delay:${(-rnd()*5).toFixed(2)}s;animation-duration:${(4+rnd()*4).toFixed(1)}s">${r}</g>`;
+  }
+  $('stars').innerHTML=`<svg shape-rendering="crispEdges">${g}</svg>`;
+}
+let stT;addEventListener('resize',()=>{clearTimeout(stT);stT=setTimeout(drawStars,200)});
+drawStars();
 
 /* старт */
 $('seg').dataset.cal=S.cal;$('bg').dataset.cal=S.cal;

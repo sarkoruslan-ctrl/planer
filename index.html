@@ -589,6 +589,12 @@ textarea.field{min-height:96px;resize:none;font:inherit;font-size:17px}
 @keyframes stTw{0%,100%{opacity:1}50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.stars g{animation:none}}
 
+.pet-cls{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 2px 10px;font-size:12px;font-weight:700}
+.pet-cls span{padding:4px 9px;border-radius:999px;color:#121212}
+.pet-cls .pc-w{background:#B69CFF}.pet-cls .pc-s{background:#D4FF3A}.pet-cls .pc-p{background:#FF8CC4}
+.pet-cls em{font-style:normal;font-weight:500;color:rgba(255,255,255,.5);font-size:12px}
+.pet-lcd svg{width:104px}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -1817,7 +1823,38 @@ const BIP={
  sad:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkwwkkkkwwkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkwwkkkkkk.','..kkkkwkkwkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...'],
  s:['................','..k..........k..','..kk........kk..','..kkkkkkkkkkkk..','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkwwkkkkwwkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','.kkkkkkkkkkkkkk.','..kkkkkkkkkkkk..','..kkkkkkkkkkkk..','...kkk....kkk...']
 };
-const bipSvg=(m,night)=>{const ink=night?'#C9E265':'#2E3A12',bg=night?'#4D5726':'#C9E265';let r='';BIP[m].forEach((row,y)=>[...row].forEach((c,x)=>{if(c!=='.')r+=`<rect x="${x}" y="${y}" width="1.03" height="1.03" fill="${c==='w'?bg:ink}"/>`}));return `<svg viewBox="0 0 16 14" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`};
+/* аксессуары Бипа: k — тёмный пиксель экранчика, w — светлый. Холст 16×17, сам Бип сдвинут на 3 строки вниз */
+const ACC={
+  glasses:{w:[[3,8],[4,8],[5,8],[6,8],[3,9],[6,9],[3,10],[6,10],[3,11],[4,11],[5,11],[6,11],[9,8],[10,8],[11,8],[12,8],[9,9],[12,9],[9,10],[12,10],[9,11],[10,11],[11,11],[12,11],[7,9],[8,9],[4,9],[10,9]],k:[[5,9],[4,10],[5,10],[11,9],[10,10],[11,10]]},
+  tie:{w:[[3,13],[4,13],[5,13],[3,14],[5,14],[3,15],[4,15],[5,15]],k:[[4,14]]},
+  cap:{k:[[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],[13,2],[14,2],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[7,0],[8,0],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[14,3],[14,4],[14,5]]},
+  shades:{w:[[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8],[9,8],[10,8],[11,8],[12,8],[13,8],[3,11],[4,11],[5,11],[6,11],[9,11],[10,11],[11,11],[12,11]],k:[[3,9],[4,9],[5,9],[6,9],[3,10],[4,10],[5,10],[6,10],[9,9],[10,9],[11,9],[12,9],[9,10],[10,10],[11,10],[12,10]]},
+  flower:{k:[[1,1],[0,2],[2,2],[1,3]]},
+  antenna:{k:[[7,0],[6,1],[7,1],[8,1],[7,2],[7,3],[7,4],[7,5]]},
+  shine:{k:[[14,0],[13,1],[15,1],[14,2]]}
+};
+const bipSvg=(m,night,acc)=>{
+  const ink=night?'#C9E265':'#2E3A12',bg=night?'#4D5726':'#C9E265',G={};
+  BIP[m].forEach((row,y)=>[...row].forEach((c,x)=>{if(c!=='.')G[x+','+(y+3)]=c==='w'?bg:ink}));
+  for(const a of acc||[]){const A=ACC[a];if(!A)continue;(A.k||[]).forEach(([x,y])=>G[x+','+y]=ink);(A.w||[]).forEach(([x,y])=>G[x+','+y]=bg)}
+  let r='';for(const k in G){const [x,y]=k.split(',');r+=`<rect x="${x}" y="${y}" width="1.03" height="1.03" fill="${G[k]}"/>`}
+  return `<svg viewBox="0 0 16 17" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+};
+/* кем становится Бип: по выполненным делам за 14 дней */
+const BCLS={
+  w:{n:'Офисный Бип',e:'👓',acc:['glasses'],acc2:['tie'],say:'Я превращаюсь в офисного Бипа 👓 Последние две недели ты больше всего работал.'},
+  s:{n:'Бип-отличник',e:'🎓',acc:['cap'],acc2:['glasses'],say:'Я надел шапочку выпускника 🎓 Последние две недели ты больше всего учился.'},
+  p:{n:'Чилл-Бип',e:'😎',acc:['shades'],acc2:['flower'],say:'Я теперь Чилл-Бип 😎 Последние две недели ты много делал для себя — так держать.'},
+  mix:{n:'Гармоничный Бип',e:'✦',acc:['antenna'],acc2:[],say:'У меня выросла антенна со звёздочкой ✦ Работа, учёба и личное у тебя в балансе.'},
+  none:{n:'Бип ещё выбирает, кем стать',e:'',acc:[],acc2:[]}
+};
+function bipClass(){
+  const today=iso(new Date()),cnt={w:0,s:0,p:0};
+  for(let i=0;i<14;i++)for(const t of dayItems(null,addDay(today,-i)))if(t.done)cnt[t.cal]++;
+  const tot=cnt.w+cnt.s+cnt.p,top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+  const cls=tot<5?'none':cnt[top]/tot>=.45?top:'mix';
+  return {cls,cnt,tot};
+}
 const isNight=()=>{const h=new Date().getHours();return h>=23||h<7};
 function bipStats(){
   const today=iso(new Date()),it=dayItems(null,today);
@@ -1827,7 +1864,8 @@ function bipStats(){
   const nrg=S.habits.length?S.habits.filter(h=>S.hab[today+'|'+h.id]).length/S.habits.length:.7;
   const st=streak(),stage=st>=21?'взрослый':st>=7?'подросток':st>=3?'малыш':'кроха',next=st>=21?0:st>=7?21-st:st>=3?7-st:3-st;
   const mood=isNight()?'s':(food<.3&&ws.length)||joy<.35?'sad':food>=.99&&ws.length?'h':'n';
-  return {food,joy,nrg,st,stage,next,mood};
+  const bc=bipClass(),C=BCLS[bc.cls],acc=st>=3?[...C.acc,...(st>=7?C.acc2:[]),...(st>=21?['shine']:[])]:[];
+  return {food,joy,nrg,st,stage,next,mood,bc,C,acc};
 }
 /* переписка хранится только на этом устройстве */
 let CH={msgs:[],last:{},seen:0};
@@ -1856,6 +1894,7 @@ function bipThink(){
   const wk=today.slice(0,8)+Math.floor(new Date().getDate()/7);
   if(!fun&&!L['j:'+wk]){const sat=addDay(today,(6-new Date().getDay()+7)%7||7);return say('j:'+wk,'Ты давно ничего не делал для себя. Запланируем отдых на выходные? 💜',[{l:'Запланировать',a:'add',v:{cal:'p',title:'Отдых',date:sat,type:'fun'}},{l:'Позже',a:'ok',g:1}])}
   if(h>=19&&S.habits.length&&!L['h:'+today]){const left=S.habits.filter(x=>!S.hab[today+'|'+x.id]);if(left.length)return say('h:'+today,`Ещё не отмечено: ${left.map(x=>(x.e||'✦')+' '+x.n).join(', ')}. Сделал?`,left.slice(0,3).map(x=>({l:'Отметить '+(x.e||x.n),a:'hab',v:x.id})))}
+  {const bc=bipClass(),stc=streak();if(stc>=3&&bc.cls!=='none'&&L.cls!==bc.cls){L.cls=bc.cls;return say('cls:'+bc.cls+':'+today,BCLS[bc.cls].say)}}
   const st=streak();if([3,7,14,21,30,50,100].includes(st)&&!L['s:'+st])return say('s:'+st,`${st} ${plural(st,['день','дня','дней'])} подряд! ${st===3?'Я вылупился в малыша':st===7?'Я вырос в подростка':st===21?'Я стал взрослым':'Ты легенда'} 🎉`);
   if(h>=18&&!L['t:'+today]){const n=dayItems(null,addDay(today,1)).length;if(n>=5)return say('t:'+today,`Завтра ${n} ${plural(n,['дело','дела','дел'])} — плотно. Может, что-то начать сегодня или перенести?`,[{l:'Открыть завтра',a:'day',v:addDay(today,1)},{l:'Ок',a:'ok',g:1}])}
 }
@@ -1874,8 +1913,9 @@ function renderPet(dir){
   const b=bipStats(),night=isNight(),p=x=>Math.round(x*100);
   const P=$('pPet');
   P.innerHTML=`<div class="petcard">
-    <div class="pet-lcd${night?' night':''}" id="petLcd"><div class="pet-say" id="petSay"></div>${bipSvg(b.mood,night)}</div>
-    <div class="pet-head"><b>Бип</b><small>${b.stage} · 🔥 ${b.st}${b.next?` · до роста ${b.next} ${plural(b.next,['день','дня','дней'])}`:''}</small></div>
+    <div class="pet-lcd${night?' night':''}" id="petLcd"><div class="pet-say" id="petSay"></div>${bipSvg(b.mood,night,b.acc)}</div>
+    <div class="pet-head"><b>${b.st>=3&&b.bc.cls!=='none'?b.C.n+' '+b.C.e:'Бип'}</b><small>${b.stage} · 🔥 ${b.st}${b.next?` · до роста ${b.next} ${plural(b.next,['день','дня','дней'])}`:''}</small></div>
+    <div class="pet-cls">${b.bc.tot?['w','s','p'].map(k=>`<span class="pc-${k}">${CAL_N[k]} ${Math.round(b.bc.cnt[k]/b.bc.tot*100)}%</span>`).join(''):''}<em>${b.st<3?'Образ Бипа появится с серии 3 дня':b.bc.cls==='none'?'Закрой хотя бы 5 дел — и Бип выберет образ':'по делам за 2 недели'}</em></div>
     ${[['🍙 Сытость',b.food,'#D4FF3A'],['💜 Счастье',b.joy,'#FF5DA8'],['⚡ Энергия',b.nrg,'#8B5CFF']].map(([n,v,c])=>`<div class="need"><span>${n}</span><span class="tr"><i style="width:${p(v)}%;background:${c}"></i></span><em>${p(v)}%</em></div>`).join('')}
   </div>
   <div class="chat">${CH.msgs.length?CH.msgs.slice(-20).map(m=>`<div class="bubble ${m.from}">${esc(m.text)}${m.acts&&m.acts.length&&!m.used?`<div class="bacts">${m.acts.map((a,i)=>`<button class="${a.g?'ghost':''}" data-m="${m.id}" data-i="${i}">${esc(a.l)}</button>`).join('')}</div>`:''}<time>${new Date(m.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</time></div>`).join(''):'<div class="chat-empty">Бип иногда будет писать сюда сам. А пока можно спросить его 👇</div>'}</div>
